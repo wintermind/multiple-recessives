@@ -919,7 +919,7 @@ def write_history_files(cows, bulls, dead_cows, dead_bulls, generation, filetag=
     ofh.write(headerline)
     for b in bulls:
         outline = ''
-        for p in c:
+        for p in b:
             outline = outline + '\t%s' % ( p )
         outline = outline + '\n'
         ofh.write(outline)
@@ -929,7 +929,7 @@ def write_history_files(cows, bulls, dead_cows, dead_bulls, generation, filetag=
     ofh.write(headerline)
     for b in dead_bulls:
         outline = ''
-        for p in c:
+        for p in b:
             outline = outline + '\t%s' % ( p )
         outline = outline + '\n'
         ofh.write(outline)
