@@ -1,7 +1,7 @@
 Programs for simulation of strategies for managing multiple recessives in a dairy cattle population
 ===================================================================================================
 
-This is a set or programs for simulating approaches to the problem of managing a
+This is a set of programs for simulating approaches to the problem of managing a
 large number of Mendelian recessives in a dairy cattle population, aand analysing
 the resulting data. The programs are general enough that they can probably be
 adapted to work with other species without much difficulty.
