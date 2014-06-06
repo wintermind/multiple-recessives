@@ -3,26 +3,24 @@
 # + Each recessive has a minor allele frequency in the base population and an economic value;
 # + Matings will be based on parent averages, and at-risk matings will be penalized by the economic value of each recessive.
 
-# We need to import a few things...
+# Import standard libraries
 import copy
-import numpy as np
-from numpy.random import randn
-import pandas as pd
-from scipy import stats
-from scipy.stats import bernoulli
+import math
 import subprocess
-import time
+import sys
+import random
 
+# Import external libraries
 import matplotlib
 # Force matplotlib to not use any X-windows backend.
 matplotlib.use('Agg')
-
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import plot, hist
-import math
-import sys
-import random
+import numpy as np
+import pandas as pd
+from scipy import stats
+from scipy.stats import bernoulli
+import seaborn as sns
 
 # Setup the simulation
 #    base_bulls:            Number of bulls in the base population (founders)
@@ -395,17 +393,17 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation, \
     matings = {}
     pedigree = []
     for c in cows:
-    new_cow = '%s %s %s\n' % ( c[0], c[1], c[2] )
+        new_cow = '%s %s %s\n' % ( c[0], c[1], c[2] )
         pedigree.append(new_cow)
     for dc in dead_cows:
-    dead_cow = '%s %s %s\n' % ( dc[0], dc[1], dc[2] )
+        dead_cow = '%s %s %s\n' % ( dc[0], dc[1], dc[2] )
         pedigree.append(dead_cow)
     for b in bulls:
-    new_bull = '%s %s %s\n' % ( b[0], b[1], b[2] )
+        new_bull = '%s %s %s\n' % ( b[0], b[1], b[2] )
         pedigree.append(new_bull)
-    matings[b[0]] = 0
+        matings[b[0]] = 0
     for db in dead_bulls:
-    dead_bull = '%s %s %s\n' % ( db[0], db[1], db[2] )
+        dead_bull = '%s %s %s\n' % ( db[0], db[1], db[2] )
         pedigree.append(dead_bull)
     if debug:
         print '[pryce_mating]: %s "old" animals in pedigree in generation %s' % \
@@ -414,10 +412,10 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation, \
     # compute inbreeding than relationships.
     calfcount = 0
     for b in bulls:
-    for c in cows:
+        for c in cows:
             #calf_id = ( b[0] * 1000 ) + c[0]
-        calf_id = int(str(b[0])+'00'+str(c[0]))
-        new_calf = '%s %s %s\n' % ( calf_id, b[0], c[0] )
+            calf_id = int(str(b[0])+'00'+str(c[0]))
+            new_calf = '%s %s %s\n' % ( calf_id, b[0], c[0] )
             pedigree.append(new_calf)
             calfcount = calfcount + 1
     if debug:
@@ -467,11 +465,11 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation, \
     b_mat = np.zeros((len(bulls), len(cows)))
     f_mat = np.zeros((len(bulls), len(cows)))
     if debug:
-    print '[pryce_mating]: Populating B_0'
+        print '[pryce_mating]: Populating B_0'
     bids = [b[0] for b in bulls]
     cids = [c[0] for c in cows]
     for b in bulls:
-    bidx = bids.index(b[0])
+        bidx = bids.index(b[0])
     for c in cows:
         cidx = cids.index(c[0])
         calf_id = str(b[0])+'00'+str(c[0])
@@ -501,12 +499,18 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation, \
             cow_loc = cow_id_list.index(c[0])
             # Get a vector of indices that would result in a sorted list.
             sorted_bulls = np.argsort(b_mat[:,cow_loc])
+            if debug:
+                print '\t[pryce_mating]: sorted_bulls has %s animals' % len(sorted_bulls)
             # The first element in sorted_sires is the index of
             # the smallest element in b_mat[:,cow_loc]. The
             # last element in sorted_sires is the index of the
             # largest element in b_mat[:,cow_loc].
             for bidx in xrange(len(sorted_bulls)-1,-1,-1):
                 # Does this bull still have matings available?
+                if debug:
+                    print '\t\t[pryce_mating]: checking bull with index %s' % bidx
+                    print '\t\t[pryce_mating]: sorted_bulls: %s' % sorted_bulls[bidx]
+                    print '\t\t[pryce_mating]: bulls       : %s' % bulls[sorted_bulls[bidx]]
                 if matings[bulls[sorted_bulls[bidx]][0]] >= max_matings:
                     pass
                 elif bulls[sorted_bulls[bidx]][5] != 'A':
@@ -547,17 +551,16 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation, \
         # for the offspring PTA and coefficients of inbreeding.
         d_mat = b_mat * m_mat
         f_mat = f_mat * m_mat
-
-    print
+        print
         print '\t[pryce_mating]: Average PTA in D_mat            : ', np.average(d_mat.sum(axis=0))
-    print '\t[pryce_mating]: Std. dev. of PTA in D_mat       : ', np.std(d_mat.sum(axis=0))
-    print '\t[pryce_mating]: Minimum PTA in D_mat            : ', np.min(d_mat.sum(axis=0))
-    print '\t[pryce_mating]: Maximum PTA in D_mat            : ', np.max(d_mat.sum(axis=0))
-    print
+        print '\t[pryce_mating]: Std. dev. of PTA in D_mat       : ', np.std(d_mat.sum(axis=0))
+        print '\t[pryce_mating]: Minimum PTA in D_mat            : ', np.min(d_mat.sum(axis=0))
+        print '\t[pryce_mating]: Maximum PTA in D_mat            : ', np.max(d_mat.sum(axis=0))
+        print
         print '\t[pryce_mating]: Average inbreeding in F_mat     : ', np.average(f_mat.sum(axis=0))
-    print '\t[pryce_mating]: Std. dev. of inbreeding in F_mat: ', np.std(f_mat.sum(axis=0))
-    print '\t[pryce_mating]: Minimum inbreeding in F_mat     : ', np.min(f_mat.sum(axis=0))
-    print '\t[pryce_mating]: Maximum inbreeding in F_mat     : ', np.max(f_mat.sum(axis=0))
+        print '\t[pryce_mating]: Std. dev. of inbreeding in F_mat: ', np.std(f_mat.sum(axis=0))
+        print '\t[pryce_mating]: Minimum inbreeding in F_mat     : ', np.min(f_mat.sum(axis=0))
+        print '\t[pryce_mating]: Maximum inbreeding in F_mat     : ', np.max(f_mat.sum(axis=0))
 
     return cows, bulls, dead_cows, dead_bulls
 
@@ -1070,9 +1073,9 @@ if __name__ == '__main__':
 
     # Simulation parameters
     base_bulls =   100         # Initial number of founder bulls in the population
-    base_cows  =  2900         # Initial number of founder cows in the population
-    max_bulls  =  1000         # Maximum number of live bulls to keep each generation
-    max_cows   = 10000         # Maximum number of live cows to keep each generation
+    base_cows  =   290         # Initial number of founder cows in the population
+    max_bulls  =   100         # Maximum number of live bulls to keep each generation
+    max_cows   =  1000         # Maximum number of live cows to keep each generation
     percent    =     0.10      # Proportion of bulls to use in the toppct scenario
 
     # Recessives are stored in a list of lists. The first value in each list
@@ -1088,18 +1091,18 @@ if __name__ == '__main__':
 
 
     # First, run the random mating scenario
-    print '=' * 80
-    recessives = copy.copy(default_recessives)
-    run_scenario(scenario='random', base_bulls=base_bulls, base_cows=base_cows, \
-        max_bulls=max_bulls, max_cows=max_cows, filetag='_ran_20_gen_1_rec_polled', \
-        recessives=recessives)
+#    print '=' * 80
+#    recessives = copy.copy(default_recessives)
+#    run_scenario(scenario='random', base_bulls=base_bulls, base_cows=base_cows, \
+#        max_bulls=max_bulls, max_cows=max_cows, filetag='_ran_20_gen_1_rec_polled', \
+#        recessives=recessives)
 
     # Now run truncation selection, just to introduce some genetic trend.
-    print '=' * 80
-    recessives = copy.copy(default_recessives)
-    run_scenario(scenario='toppct', percent=percent, base_bulls=base_bulls, \
-        base_cows=base_cows, max_bulls=max_bulls, max_cows=max_cows, \
-        filetag='_toppct_20_gen_1_rec_polled', recessives=recessives)
+#    print '=' * 80
+#    recessives = copy.copy(default_recessives)
+#    run_scenario(scenario='toppct', percent=percent, base_bulls=base_bulls, \
+#        base_cows=base_cows, max_bulls=max_bulls, max_cows=max_cows, \
+#        filetag='_toppct_20_gen_1_rec_polled', recessives=recessives)
 
     # This is the real heart of the analysis, applying Pryce's method.
     print '=' * 80
