@@ -17,6 +17,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import plot, hist
 import numpy as np
+from numpy import NA as NA
 import pandas as pd
 from scipy import stats
 from scipy.stats import bernoulli
@@ -25,6 +26,7 @@ import seaborn as sns
 # Setup the simulation
 #    base_bulls:            Number of bulls in the base population (founders)
 #    base_cows:             Number of cows in the base population (founders)
+#    base_herds:            Number of herds in the population.
 #    force_carriers:        If True, force at least one carrier of each sex.
 #    force_best:            If True, force one carrier of each breed to have a
 #                           TBV that is 4 SD above the mean for that sex.
@@ -33,7 +35,8 @@ import seaborn as sns
 #                           the sire and dam TBV in the base population.
 #    rng_key:                An integer used to see the random number generation. If
 #                           False, a default value of 8675309 is used.
-def setup(base_bulls=500, base_cows=2500, force_carriers=True, force_best=True, recessives=[], check_tbv=False, rng_key=False):
+def setup(base_bulls=500, base_cows=2500, base_herds=100, force_carriers=True, force_best=True, \
+    recessives=[], check_tbv=False, rng_key=False):
 
     # Base population parameters
     generation = 0            # The simulation starts at generation 0. It's as though we're all C programmers.
@@ -59,7 +62,7 @@ def setup(base_bulls=500, base_cows=2500, force_carriers=True, force_best=True, 
     # Create the base population of cows and bulls.
 
     # Assume bulls average 1.5 SD better than the cows.
-    mu_bulls = mu_cows + ( sigma * 0.15 )
+    mu_bulls = mu_cows + (sigma * 1.5)
 
     # Make true breeding values
     base_cow_tbv = ( sigma * np.random.randn(base_cows,1) ) + mu_cows
@@ -123,7 +126,7 @@ def setup(base_bulls=500, base_cows=2500, force_carriers=True, force_best=True, 
             # Compute the frequency of the AA and Aa genotypes
             f_dom = (1. - r_freq)**2
             f_het = (2 * r_freq * (1. - r_freq))
-            f_rec = (r_freq)**2
+            f_rec = r_freq**2
             print 'This recessive is ***NOT LETHAL***'
             print 'Recessive %s, generation %s:' % ( r, generation )
             print '\tp = %s' % (1. - r_freq)
@@ -175,12 +178,12 @@ def setup(base_bulls=500, base_cows=2500, force_carriers=True, force_best=True, 
     # Add animals to the bull list.
     for i in xrange(base_cows):
         # The list contents are:
-        # animal ID, sire ID, dam ID, generation, sex, alive/dead, reason dead, when dead, TBV, genotype
+        # animal ID, sire ID, dam ID, generation, sex, herd, alive/dead, reason dead, when dead, TBV, genotype
         # "generation" is the generation in which the base population animal was born, not its actual
         # age.
         c = i + 1
-        c_list = [c, 0, 0, (-1*random.randint(0,4)), 'F', 'A', '', \
-        -1, base_cow_tbv.item(i), []]
+        c_list = [c, 0, 0, (-1*random.randint(0,4)), 'F', random.randint(0,base_herds), 'A', \
+            '', -1, base_cow_tbv.item(i), []]
         for r in xrange(len(recessives)):
             c_list[-1].append(base_cow_gt.item(i,r))
         cows.append(c_list)
@@ -188,8 +191,8 @@ def setup(base_bulls=500, base_cows=2500, force_carriers=True, force_best=True, 
     # Add animals to the bull list.
     for i in xrange(base_bulls):
         b = i + 1 + base_cows
-        b_list = [b, 0, 0, (-1*random.randint(0,9)), 'M', 'A', '', \
-        -1, base_bull_tbv.item(i), []]
+        b_list = [b, 0, 0, (-1*random.randint(0,9)), 'M', random.randint(0,base_herds), 'A', '', \
+            -1, base_bull_tbv.item(i), []]
         for r in xrange(len(recessives)):
             b_list[-1].append(base_bull_gt.item(i,r))
         bulls.append(b_list)
@@ -316,14 +319,14 @@ def toppct_mating(cows, bulls, dead_cows, dead_bulls, generation, \
     # Now we need to randomly assign mates. We do this as follows:
     #     1. Loop over cow list
     if debug: 
-        print '\t[toppct_mating]: %s bulls in list for mating' % ( len(bulls) )
-        print '\t[toppct_mating]: %s cows in list for mating' % ( len(cows) )
+        print '\t[toppct_mating]: %s bulls in list for mating' % len(bulls)
+        print '\t[toppct_mating]: %s cows in list for mating' % len(cows)
     for c in cows:
         # Is the cow alive?
-        if c[5] == 'A':
+        if c[6] == 'A':
             cow_id = c[0]
             mated = False
-            if debug: print '\t[toppct_mating]: Mating cow %s' % ( cow_id )
+            if debug: print '\t[toppct_mating]: Mating cow %s' % cow_id
             while mated == False:
     #     2. For each cow, pick a bull at random
                 # Note the offset index to account for the fact that we're picking only
@@ -332,15 +335,19 @@ def toppct_mating(cows, bulls, dead_cows, dead_bulls, generation, \
                 bull_id = bulls[bull_to_use][0]
                 #if debug: print 'Using bull %s (ID %s)' % ( bull_to_use, bull_id )
     #     3. If the bull is alive then use him            
-                if bulls[bull_to_use][5] == 'A':
-                    if debug: print 'bull %s (ID %s) is alive' % ( bull_to_use, bull_id )
+                if bulls[bull_to_use][6] == 'A':
+                    if debug:
+                        print 'bull %s (ID %s) is alive' % ( bull_to_use, bull_id )
                     # Create the resulting calf
                     calf = create_new_calf(bulls[bull_to_use], c, recessives, next_id, generation, debug=debug)
-                    if debug: print calf
-                    if calf[4] == 'F': new_cows.append(calf)
-                    else: new_bulls.append(calf)
+                    if debug:
+                        print calf
+                    if calf[4] == 'F':
+                        new_cows.append(calf)
+                    else:
+                        new_bulls.append(calf)
     #         Done!
-                next_id = next_id + 1
+                next_id += 1
                 mated = True
         else:
             if debug: print '[toppct_mating]: bull %s (ID %s) is not alive' % ( bull_to_use, bull_id )
@@ -350,10 +357,10 @@ def toppct_mating(cows, bulls, dead_cows, dead_bulls, generation, \
         print '\t[toppct_mating]: %s animals in original bull list' % ( len(bulls) )
         print '\t[toppct_mating]: %s animals in new bull list' % ( len(new_bulls) )
     for nc in new_cows:
-        if nc[5] == 'A': cows.append(nc)
+        if nc[6] == 'A': cows.append(nc)
         else: dead_cows.append(nc)
     for nb in new_bulls:
-        if nb[5] == 'A': bulls.append(nb)
+        if nb[6] == 'A': bulls.append(nb)
         else: dead_bulls.append(nc)
     if debug:
         print '\t[toppct_mating]: %s animals in final cow list' % ( len(cows) )
@@ -371,9 +378,10 @@ def toppct_mating(cows, bulls, dead_cows, dead_bulls, generation, \
 # generation    : The current generation in the simulation
 # recessives    : A Python list of recessives in the population
 # max_matings   : The maximum number of matings permitted for each bull
+# base_herds    : Number of herds in the population.
 # debug         : Flag to activate/deactivate debugging messages
 def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation, \
-    recessives, max_matings=500, debug=False):
+    recessives, max_matings=500, base_herds=100, debug=False):
     if debug:
         print '[pryce_mating]: PARMS:\n\tgeneration: %s\n\trecessives; %s\n\tmax_matings: %s\n\tdebug: %s' % \
             ( generation, recessives, max_matings, debug )
@@ -384,10 +392,11 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation, \
     if not type(max_matings) is int:
         print '[pryce_mating]: % is not not an integer, changing num_matings to 500.' % ( max_matings )
     #
-    # Now, we're going to need to construct a pedigree that includes matings of all cows to
-    # all bulls because it is much faster to calculate inbreeding of potential offspring than
-    # it is to calculate relationships among parents because the latter requires that we store
-    # relationships among all parents.
+    # Now, we're going to need to construct a pedigree that includes matings of all cows in
+    # each herd to the bulls randomly assigned to that herd. Bulls are randomly assigned to
+    # herds to reflect different sire selection policies. It is faster to calculate the
+    # inbreeding of the potential offspring than it is to calculate relationships among parents
+    # because the latter requires that we store relationships among all parents.
     #
     next_id = len(cows) + len(bulls) + len(dead_cows) + len(dead_bulls) + 1
     matings = {}
@@ -411,45 +420,47 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation, \
     # Now we need to create faux offspring of the living bulls and cows because it is faster to
     # compute inbreeding than relationships.
     calfcount = 0
-    for b in bulls:
-        for c in cows:
-            #calf_id = ( b[0] * 1000 ) + c[0]
-            calf_id = int(str(b[0])+'00'+str(c[0]))
-            new_calf = '%s %s %s\n' % ( calf_id, b[0], c[0] )
-            pedigree.append(new_calf)
-            calfcount = calfcount + 1
+    n_bulls = int(round(len(b) / base_herds, 0))
+    for herd in xrange(base_herds):
+        random.shuffle(b)               # Randomly assign bulls to cows
+        herd_bulls = b[0:n_bulls+1]
+        for b in herd_bulls:
+            for c in cows:
+                calf_id = int(str(b[0])+'00'+str(c[0]))
+                new_calf = '%s %s %s\n' % ( calf_id, b[0], c[0] )
+                pedigree.append(new_calf)
+                calfcount += 1
     if debug:
         print '[pryce_mating]: %s calves added to pedigree in generation %s' % \
             ( calfcount, generation )
         print '[pryce_mating]: %s total animals in pedigree in generation %s' % \
             ( len(pedigree), generation )
-    # Write the pedigree to a file, because I was using pedstreams with PyPedal, but
-    # that's REALLY slow.
-    pedfile = 'pedigree_%s.txt' % ( generation )
+    # Write the pedigree to a file.
+    pedfile = 'pedigree_%s.txt' % generation
     if debug:
-        print '[pryce_mating]: Writing pedigree to %s' % ( pedfile )
+        print '[pryce_mating]: Writing pedigree to %s' % pedfile
     ofh = file(pedfile, 'w')
     for p in pedigree:
         ofh.write(p)
     ofh.close()
     # PyPedal is just too slow when the pedigrees are large (e.g., millons of records), so
     # we're going to use Ignacio Aguilar's INBUPGF90 program.
-    logfile = 'pedigree_%s.log' % ( generation )
+    logfile = 'pedigree_%s.log' % generation
     #Several methods can be used:
     # 1 - recursive as in Aguilar & Misztal, 2008 (default)
     # 2 - recursive but with coefficients store in memory, faster with large number of generations but more memory requirements
     # 3 - method as in Meuwissen & Luo 1992
     callinbupgf90 = ['inbupgf90', '--pedfile', pedfile, '--method', '3', '>', logfile, '2>&1&']
     if debug:
-        print '[pryce_mating]: Calling inbupgf90 to calculate COI:\n\t%s' % ( callinbupgf90 )
+        print '[pryce_mating]: Calling inbupgf90 to calculate COI:\n\t%s' % callinbupgf90
     subprocess.call(callinbupgf90, shell=False)
     #print '[pryce_mating]: inbupgf90 returned code ',  p.stdout.read()
 
-    # Load the COI into a dictionary keyes by original animal ID
+    # Load the COI into a dictionary keyed by original animal ID
     coifile = 'pedigree_%s.txt.solinb' % ( generation )
     if debug:
         print '[pryce_mating]: Putting coefficients of inbreeding from %s.solinb in a dictionary' \
-            % ( pedfile )
+            % pedfile
     inbr = {}
     ifh = open(coifile, 'r')
     for line in ifh:
@@ -473,9 +484,20 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation, \
     for c in cows:
         cidx = cids.index(c[0])
         calf_id = str(b[0])+'00'+str(c[0])
-        b_mat[bidx, cidx] = ( 0.5 * ( b[8] + c[8] ) ) - \
+        # If there is a hit on this key, then it means that the bull was
+        # used in the herd in which the cow lives.
+        try:
+            b_mat[bidx, cidx] = ( 0.5 * ( b[8] + c[8] ) ) - \
                 ( inbr[calf_id] * 100 * flambda )
-        f_mat[bidx, cidx] = inbr[calf_id]
+            f_mat[bidx, cidx] = inbr[calf_id]
+        # If there is not matching key in the dictionary, then that
+        # cow-bull combination was not evaluated, which means the bull
+        # was not used in the same herd as the cow. We're setting those
+        # cells to "NA" instead of a proxy value, e.g., -999, since
+        # NumPy functions and methods are supposed to understand them.
+        except KeyError:
+            b_mat[bidx, cidx] = NA
+            f_mat[bidx, cidx] = NA
 
     # Now we're going to actually allocate mate pairs
     m_mat = np.zeros((len(bulls), len(cows)))
@@ -494,7 +516,7 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation, \
     new_bulls = []
     new_cows = []
     for c in cows:
-        if c[5] == 'A':
+        if c[6] == 'A':
             # What column in b_mat corresponds to cow c?
             cow_loc = cow_id_list.index(c[0])
             # Get a vector of indices that would result in a sorted list.
@@ -519,38 +541,45 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation, \
                     # Allocate the mating
                     m_mat[sorted_bulls[bidx], cow_loc] = 1
                     # Increment the matings counter
-                    matings[bulls[sorted_bulls[bidx]][0]] = matings[bulls[sorted_bulls[bidx]][0]] + 1
+                    matings[bulls[sorted_bulls[bidx]][0]] += 1
                     # Create the resulting calf
                     calf = create_new_calf(bulls[sorted_bulls[bidx]], c, recessives, next_id, generation, debug=debug)
                     # if debug: print calf
-                    if calf[4] == 'F': new_cows.append(calf)
-                    else: new_bulls.append(calf)
-                    next_id = next_id + 1
+                    if calf[4] == 'F':
+                        new_cows.append(calf)
+                    else:
+                        new_bulls.append(calf)
+                    next_id += 1
                     # ...and, we're done.
                     break
 
     if debug:
-        print '\t[pryce_mating]: %s animals in original cow list' % ( len(cows) )
-        print '\t[pryce_mating]: %s animals in new cow list' % ( len(new_cows) )
-        print '\t[pryce_mating]: %s animals in original bull list' % ( len(bulls) )
-        print '\t[pryce_mating]: %s animals in new bull list' % ( len(new_bulls) )
+        print '\t[pryce_mating]: %s animals in original cow list' % len(cows)
+        print '\t[pryce_mating]: %s animals in new cow list' % len(new_cows)
+        print '\t[pryce_mating]: %s animals in original bull list' % len(bulls)
+        print '\t[pryce_mating]: %s animals in new bull list' % len(new_bulls)
     for nc in new_cows:
-        if nc[5] == 'A': cows.append(nc)
-        else: dead_cows.append(nc)
+        if nc[6] == 'A':
+            cows.append(nc)
+        else:
+            dead_cows.append(nc)
     for nb in new_bulls:
-        if nb[5] == 'A': bulls.append(nb)
-        else: dead_bulls.append(nc)
+        if nb[6] == 'A':
+            bulls.append(nb)
+        else:
+            dead_bulls.append(nb)
     if debug:
-        print '\t[pryce_mating]: %s animals in final live cow list' % ( len(cows) )
-        print '\t[pryce_mating]: %s animals in final dead cow list' % ( len(dead_cows) )
-        print '\t[pryce_mating]: %s animals in final live bull list' % ( len(bulls) ) 
-    print '\t[pryce_mating]: %s animals in final dead bull list' % ( len(dead_bulls) )
+        print '\t[pryce_mating]: %s animals in final live cow list' % len(cows)
+        print '\t[pryce_mating]: %s animals in final dead cow list' % len(dead_cows)
+        print '\t[pryce_mating]: %s animals in final live bull list' % len(bulls)
+        print '\t[pryce_mating]: %s animals in final dead bull list' % len(dead_bulls)
 
     if debug:
         # The D_mat and F_mat matrices are used to compute summary statistics
         # for the offspring PTA and coefficients of inbreeding.
         d_mat = b_mat * m_mat
         f_mat = f_mat * m_mat
+        # We might need ", skipna=True".
         print
         print '\t[pryce_mating]: Average PTA in D_mat            : ', np.average(d_mat.sum(axis=0))
         print '\t[pryce_mating]: Std. dev. of PTA in D_mat       : ', np.std(d_mat.sum(axis=0))
@@ -578,12 +607,12 @@ def create_new_calf(sire, dam, recessives, calf_id, generation, debug=False):
     if bernoulli.rvs(0.50): sex = 'M'
     else: sex = 'F'
     # Compute the parent average
-    tbv = ( sire[8] + dam[8] ) * 0.5
+    tbv = ( sire[9] + dam[9] ) * 0.5
     # Add a Mendelian sampling term -- in this case, it's set to
     # +/- 1 genetic SD.
     tbv = tbv + ( random.uniform(-1.,1.) * 200 )
     # Form the animal record
-    calf = [calf_id, sire[0], dam[0], generation, sex, 'A', '', -1, tbv, []]
+    calf = [calf_id, sire[0], dam[0], generation, sex, dam[5], 'A', '', -1, tbv, []]
     # Check the bull and cow genotypes to see if the mating is at-risk
     # If it is, then reduce the parent average by the value of the recessive.
     c_gt = dam[-1]
@@ -616,9 +645,9 @@ def create_new_calf(sire, dam, recessives, calf_id, generation, debug=False):
         if s_allele == 'a' and d_allele == 'a':
             # The recessive is lethal.
             if recessives[r][2] == 1: 
-                calf[5] = 'D'            # The calf is dead
-                calf[6] = 'R'            # Because of a recessive lethal
-                calf[7] = generation     # In utero
+                calf[6] = 'D'            # The calf is dead
+                calf[7] = 'R'            # Because of a recessive lethal
+                calf[8] = generation     # In utero
             # In either case (lethal or non-lethal) the genotype is the same.
             calf[-1].append(-1)
         # This mating produces only 'AA' genotype.
@@ -666,16 +695,16 @@ def cull_bulls(bulls, dead_bulls, generation, max_bulls=250, debug=False):
     for b in bulls:
         #if b[3] > 10:
         if ( generation - b[3] ) > 10:
-            b[5] = 'D'            # This bull is dead
-            b[6] = 'A'            # From age
-            b[7] = generation     # In the current generation
+            b[6] = 'D'            # This bull is dead
+            b[7] = 'A'            # From age
+            b[8] = generation     # In the current generation
             dead_bulls.append(b)  # Add it to the dead bulls list
             n_culled = n_culled + 1
     if debug: print '\t[cull_bulls]: %s bulls culled for age in generation %s (age>10)' % ( n_culled, generation )
     # Now we have to remove the dead bulls from the bulls list
-    bulls[:] = [b for b in bulls if b[5] == 'A'] 
+    bulls[:] = [b for b in bulls if b[6] == 'A']
     # Now we're going to sort on TBV
-    bulls.sort(key=lambda x: x[8])
+    bulls.sort(key=lambda x: x[9])
     # Check to see if we need to cull on number (count).
     if len(bulls) <= max_bulls:
         if debug: print '\t[cull_bulls]: No bulls culled in generation %s (bulls<max_bulls)' % ( generation )
@@ -687,9 +716,9 @@ def cull_bulls(bulls, dead_bulls, generation, max_bulls=250, debug=False):
         n_culled = 0
         random.shuffle(bulls)
         for b in bulls[0:len(bulls)-max_bulls-1]:
-            b[5] = 'D'           # This bull is dead
-            b[6] = 'N'           # Because there were too many of them
-            b[7] = generation    # In the current generation
+            b[6] = 'D'           # This bull is dead
+            b[7] = 'N'           # Because there were too many of them
+            b[8] = generation    # In the current generation
             dead_bulls.append(b)
             n_culled = n_culled + 1
         bulls = bulls[len(bulls)-max_bulls:]
@@ -742,29 +771,29 @@ def cull_cows(cows, dead_cows, generation, max_cows=0, culling_rate=0.0, debug=F
     for c in cows:
         #if c[3] > 7:
         if ( generation - c[3] ) > 5:
-            c[5] = 'D'            # This cow is dead
-            c[6] = 'A'            # Because of her age
-            c[7] = generation     # In the current generation
+            c[6] = 'D'            # This cow is dead
+            c[7] = 'A'            # Because of her age
+            c[8] = generation     # In the current generation
             dead_cows.append(c)   # Add it to the dead cows list
             n_culled = n_culled + 1
     if debug: print '\t[cull_cows]: %s cows culled for age in generation %s' % ( n_culled, generation )
     # Now we have to remove the dead animals from the cows list
-    cows[:] = [c for c in cows if c[5] == 'A']
+    cows[:] = [c for c in cows if c[6] == 'A']
     # Now for the involuntary culling!
     if culling_rate > 0:
         n_culled = 0
         for c in cows:
             if random.uniform(0,1) < culling_rate:
-                c[5] = 'D'             # This cow is dead
-                c[6] = 'C'             # Because of involuntary culling
-                c[7] = generation      # In the current generation
+                c[6] = 'D'             # This cow is dead
+                c[7] = 'C'             # Because of involuntary culling
+                c[8] = generation      # In the current generation
                 dead_cows.append(c)    # Add it to the dead cows list
                 n_culled = n_culled + 1
         if debug: print '\t[cull_cows]: %s cows involuntarily culled in generation %s' % ( n_culled, generation )
     # Now we have to remove the dead animals from the cows list
-    cows[:] = [c for c in cows if c[5] == 'A']
+    cows[:] = [c for c in cows if c[6] == 'A']
     # Now we're going to sort on TBV in ascending order
-    cows.sort(key=lambda x: x[8])
+    cows.sort(key=lambda x: x[9])
     # Check to see if we need to cull on number (count).
     if max_cows == 0:
         if debug: print '\t[cull_cows]: No cows were culled to maintain herd size in generation %s (max_cows=0)' % ( generation )
@@ -778,9 +807,9 @@ def cull_cows(cows, dead_cows, generation, max_cows=0, culling_rate=0.0, debug=F
         c_diff = len(cows) - max_cows
         #print 'c_diff = %s' % ( c_diff )
         for c in cows[0:c_diff-1]:
-            c[5] = 'D'           # This cow is dead
-            c[6] = 'N'           # Because there were too many of them
-            c[7] = generation    # In the current generation
+            c[6] = 'D'           # This cow is dead
+            c[7] = 'N'           # Because there were too many of them
+            c[8] = generation    # In the current generation
             dead_cows.append(c)
         cows = cows[c_diff:]
         if debug: print '\t[cull_cows]: %s cows were culled to maintain herd size in generation %s (cows>max_cows)' % ( c_diff, generation )
@@ -799,12 +828,14 @@ def animal_summary(animals):
     sumsq = 0.
     for a in animals:
     #print '%s' % ( a )
-        count = count + 1
-        total = total + a[8]
-        if a[8] < tmin: tmin = a[8]
-        if a[8] > tmax: tmax = a[8]
-        sumx = sumx + a[8]
-        sumsq = sumsq + (a[8]**2)
+        count += 1
+        total = total + a[9]
+        if a[9] < tmin:
+            tmin = a[9]
+        if a[9] > tmax:
+            tmax = a[9]
+        sumx = sumx + a[9]
+        sumsq += a[9]**2
     if count == 0.:
         samplemean = -999.
         samplevar = -999.
@@ -893,7 +924,7 @@ def write_history_files(cows, bulls, dead_cows, dead_bulls, generation, filetag=
     deadbullfile = 'dead_bulls_history%s_%s.txt' % ( filetag, generation )
     # Column labels
     # next_id, bull_id, cow_id, generation, sex, 'A', '', -1, tbv, []
-    headerline = 'animal\tsire\tdam\tborn\tsex\tstatus\tcause\tdied\tTBV\trecessives\n'
+    headerline = 'animal\tsire\tdam\tborn\tsex\therd\tstatus\tcause\tdied\tTBV\trecessives\n'
     # Cows
     ofh = file(cowfile, 'w')
     ofh.write(headerline)
@@ -944,6 +975,7 @@ def write_history_files(cows, bulls, dead_cows, dead_bulls, generation, filetag=
 #                     scenario
 # base_bulls        : The number of bulls in the base population
 # base_cows         : The number of cows in the base population
+# base_herds        : Number of herds in the population.
 # max_bulls         : The maximum number of bulls that can be alive at one time
 # max_cows          : The maximum number of cows that can be alive at one time
 # debug             : Flag to activate/deactivate debugging messages
@@ -951,11 +983,11 @@ def write_history_files(cows, bulls, dead_cows, dead_bulls, generation, filetag=
 #                     a file is associated with
 # recessives        : A Python list of recessives in the population
 def run_scenario(scenario='random', gens=20, percent=0.10, base_bulls=500, base_cows=2500, \
-    max_bulls=1500, max_cows=7500, debug=False, filetag='', recessives=[]):
+    base_herds=100, max_bulls=1500, max_cows=7500, debug=False, filetag='', recessives=[]):
 
     # This is the initial setup
     cows, bulls, dead_cows, dead_bulls, freq_hist = setup(base_bulls=base_bulls, \
-        base_cows=base_cows, recessives=recessives)
+        base_cows=base_cows, base_herds=base_herds, recessives=recessives)
 
     # This is the start of the next generation
     for generation in xrange(1,gens+1):
@@ -987,8 +1019,8 @@ def run_scenario(scenario='random', gens=20, percent=0.10, base_bulls=500, base_
         # work out okay.
         elif scenario == 'pryce':
             cows, bulls, dead_cows, dead_bulls = pryce_mating(cows, bulls, \
-                dead_cows, dead_bulls, generation, recessives, max_matings=500,
-        debug=debug)
+                dead_cows, dead_bulls, generation, recessives, max_matings=500, \
+                debug=debug)
         # The default scenario is random mating.
         else:
              cows, bulls, dead_cows, dead_bulls = random_mating(cows, bulls, \
