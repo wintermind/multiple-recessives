@@ -43,7 +43,8 @@ def setup(base_bulls=500, base_cows=2500, base_herds=100, force_carriers=True, f
 
     # Recessives are required since that's the whole point of this.
     if len(recessives) == 0:
-        print '[setup]: The recessives dictionary passed to the setup() subroutine was empty! The program cannot continue, and will halt.'
+        print '[setup]: The recessives dictionary passed to the setup() subroutine was empty! The program \
+            cannot continue, and will halt.'
         sys.exit(1)
 
     # Seed the RNG
@@ -101,7 +102,7 @@ def setup(base_bulls=500, base_cows=2500, base_herds=100, force_carriers=True, f
             f_dom = (1. - r_freq)**2 / denom
             f_het = (2 * r_freq * (1. - r_freq)) / denom
             print 'This recessive is ***LETHAL***'
-            print 'Recessive %s, generation %s:' % (r, generation)
+            print 'Recessive %s (%s), generation %s:' % (r, recessives[r][3], generation)
             print '\tp = %s' % (1. - r_freq)
             print '\tq = %s' % r_freq
             print '\tf(AA) = %s' % f_dom
@@ -119,8 +120,8 @@ def setup(base_bulls=500, base_cows=2500, base_herds=100, force_carriers=True, f
                 base_cow_gt[r, r] = 0
                 base_bull_gt[r, r] = 0
                 print '\t[setup]: Forcing carriers to bend Nature to my will...'
-                print '\t[setup]: \tCow %s is a carrier for recessive %s' % ( r, r )
-                print '\t[setup]: \tBull %s is a carrier for recessive %s' % ( r, r )
+                print '\t[setup]: \tCow %s is a carrier for recessive %s (%s)' % (r, recessives[r][3], r)
+                print '\t[setup]: \tBull %s is a carrier for recessive %s (%s)' % (r, recessives[r][3], r)
         # The recessive is NOT lethal
         else:
             # Compute the frequency of the AA and Aa genotypes
@@ -128,7 +129,7 @@ def setup(base_bulls=500, base_cows=2500, base_herds=100, force_carriers=True, f
             f_het = (2 * r_freq * (1. - r_freq))
             f_rec = r_freq**2
             print 'This recessive is ***NOT LETHAL***'
-            print 'Recessive %s, generation %s:' % (r, generation)
+            print 'Recessive %s (%s), generation %s:' % (r, recessives[r][3], generation)
             print '\tp = %s' % (1. - r_freq)
             print '\tq = %s' % r_freq
             print '\tf(AA) = %s' % f_dom
@@ -166,8 +167,8 @@ def setup(base_bulls=500, base_cows=2500, base_herds=100, force_carriers=True, f
                 base_cow_gt[r, r] = 0
                 base_bull_gt[r, r] = 0
                 print '\t[setup]: Forcing there to be a carrier for each recessive, i.e., bending Nature to my will.'
-                print '\t[setup]: \tCow %s is a carrier for recessive %s' % ( r, r )
-                print '\t[setup]: \tBull %s is a carrier for recessive %s' % ( r, r )
+                print '\t[setup]: \tCow %s is a carrier for recessive %s (%s)' % (r, recessives[r][3], r)
+                print '\t[setup]: \tBull %s is a carrier for recessive %s (%s)' % (r, recessives[r][3], r)
             
     # Storage
     cows = []                       # List of live cows in the population
@@ -629,7 +630,7 @@ def create_new_calf(sire, dam, recessives, calf_id, generation, debug=False):
     tbv = (sire[9] + dam[9]) * 0.5
     # Add a Mendelian sampling term -- in this case, it's set to
     # +/- 1 genetic SD.
-    tbv = tbv + (random.uniform(-1., 1.) * 200)
+    tbv += (random.uniform(-1., 1.) * 200)
     # Form the animal record. Note that heifers are born into the same herd as their
     # dam.
     calf = [calf_id, sire[0], dam[0], generation, sex, dam[5], 'A', '', -1, tbv, []]
@@ -682,8 +683,9 @@ def create_new_calf(sire, dam, recessives, calf_id, generation, debug=False):
             # change from AA to Aa.
             if random.randint(1, 100001) == 1:
                 if debug:
-                    print '\t[create_new_calf]: A mutation happened when bull %s was mated to cow %s to \
-                        produce animal %s!' % (sire[0], dam[0], calf_id)
+                    print '\t[create_new_calf]: A mutation in recessive %s (%s) happened when ' \
+                        'bull %s was mated to cow %s to produce animal %s!' % (r, recessives[r][3], \
+                        sire[0], dam[0], calf_id)
                 calf[-1].append(0)
             else:
                 calf[-1].append(1)
@@ -907,7 +909,7 @@ def update_maf(cows, bulls, generation, recessives, freq_hist):
             f_dom = (1. - r_freq)**2 / denom
             f_het = (2 * r_freq * (1. - r_freq)) / denom
             print
-            print '\tRecessive %s, generation %s:' % (r, generation)
+            print '\tRecessive %s (%s), generation %s:' % (r, recessives[r][3], generation)
             print '\t\tminor alleles = %s\t\ttotal alleles = %s' % (minor_allele_counts[r], total_alleles)
             print '\t\tp = %s\t\tq = %s' % ((1. - r_freq), r_freq)
             print '\t\t  = %s\t\t  = %s' % ( \
@@ -922,7 +924,7 @@ def update_maf(cows, bulls, generation, recessives, freq_hist):
             f_rec = (r_freq)**2
             print
             print '\tThis recessive is ***NOT LETHAL***'
-            print '\tRecessive %s, generation %s:' % (r, generation)
+            print '\tRecessive %s (%s), generation %s:' % (r, recessives[r][3], generation)
             print '\t\tminor alleles = %s\t\ttotal alleles = %s' % (minor_allele_counts[r], total_alleles)
             print '\t\tp = %s\t\tq = %s' % ((1. - r_freq), r_freq)
             print '\t\t  = %s\t\t  = %s' % ( \
@@ -1139,9 +1141,19 @@ if __name__ == '__main__':
     # non-lethal (0). The fourth value is a label that is not used for any
     # calculations.
     default_recessives = [
-        [0.10, -50, 0, 'Polled'],
+        [0.0276, 150, 1, 'Brachyspina'],
+        [0.0192,  40, 1, 'HH1'],
+        [0.0166,  40, 1, 'HH2'],
+        [0.0295,  40, 1, 'HH3'],
+        [0.0037,  40, 1, 'HH4'],
+        [0.0222,  40, 1, 'HH5'],
+        [0.0025, 150, 1, 'BLAD'],
+        [0.0137,  70, 1, 'CVM'],
+        [0.0001,  40, 1, 'DUMPS'],
+        [0.0007, 150, 1, 'Mulefoot'],
+        [0.71,   -20, 0, 'Polled'],
+        [0.0542,  20, 0, 'Red'],
     ]
-
 
     # First, run the random mating scenario
 #    print '=' * 80
