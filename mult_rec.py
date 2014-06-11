@@ -1194,15 +1194,15 @@ def run_scenario(scenario='random', gens=20, percent=0.10, base_bulls=500, base_
 if __name__ == '__main__':
 
     # Simulation parameters
-    base_bulls  =    15         # Initial number of founder bulls in the population
-    base_cows   =   300         # Initial number of founder cows in the population
-    base_herds  =     3         # Number of herds in the population
-    max_bulls   =    90         # Maximum number of live bulls to keep each generation
-    max_cows    =   600         # Maximum number of live cows to keep each generation
-    percent     =     0.10      # Proportion of bulls to use in the toppct scenario
-    generations =     4         # How long to run the simulation
-    max_matings =    30         # The maximum number of matings permitted for each bull
-    debug       =  True         # Activate (True) or deactivate (False) debugging messages
+    base_bulls  =   1500         # Initial number of founder bulls in the population
+    base_cows   =  30000         # Initial number of founder cows in the population
+    base_herds  =    150         # Number of herds in the population
+    max_bulls   =   6000         # Maximum number of live bulls to keep each generation
+    max_cows    = 120000         # Maximum number of live cows to keep each generation
+    percent     =     0.10       # Proportion of bulls to use in the toppct scenario
+    generations =    10          # How long to run the simulation
+    max_matings =   200          # The maximum number of matings permitted for each bull
+    debug       = False          # Activate (True) or deactivate (False) debugging messages
 
     # Recessives are stored in a list of lists. The first value in each list
     # is the minor allele frequency in the base population, and the second
