@@ -1,7 +1,10 @@
-# The objective of this simulation is to consider several scenarios for the management of multiple recessive alleles in a simulated population of dairy cattle. The basic idea is simple:
-# + Each animal has parents, a sex code, a true breeding value for lifetime net merit, and a genotype for the recessive alleles in the population;
+# The objective of this simulation is to consider several scenarios for the management of multiple
+# recessive alleles in a simulated population of dairy cattle. The basic idea is simple:
+# + Each animal has parents, a sex code, a true breeding value for lifetime net merit, and a genotype
+#   for the recessive alleles in the population;
 # + Each recessive has a minor allele frequency in the base population and an economic value;
-# + Matings will be based on parent averages, and at-risk matings will be penalized by the economic value of each recessive.
+# + Matings will be based on parent averages, and at-risk matings will be penalized by the economic
+#   value of each recessive.
 
 # Import standard libraries
 import copy
@@ -20,7 +23,6 @@ from matplotlib.pyplot import plot, hist
 import numpy as np
 import numpy.ma as ma
 from scipy.stats import bernoulli
-import seaborn as sns
 
 # Setup the simulation
 #    base_bulls:            Number of bulls in the base population (founders)
@@ -35,8 +37,10 @@ import seaborn as sns
 #    rng_key:                An integer used to see the random number generation. If
 #                           False, a default value of 8675309 is used.
 #    debug                  Flag to activate/deactivate debugging messages.
-def setup(base_bulls=500, base_cows=2500, base_herds=100, force_carriers=True, force_best=True, \
-    recessives=[], check_tbv=False, rng_key=False, debug=True):
+
+
+def setup(base_bulls=500, base_cows=2500, base_herds=100, force_carriers=True, force_best=True,
+          recessives=[], check_tbv=False, rng_key=False, debug=True):
 
     # Base population parameters
     generation = 0                  # The simulation starts at generation 0. It's as though we're all C programmers.
@@ -187,8 +191,8 @@ def setup(base_bulls=500, base_cows=2500, base_herds=100, force_carriers=True, f
         if c in id_list:
             if debug:
                 print '[setup]: Error! A cow with ID %s already exists in the ID list!' % c
-        c_list = [c, 0, 0, (-1*random.randint(0, 4)), 'F', random.randint(0, base_herds), 'A', \
-            '', -1, base_cow_tbv.item(i), []]
+        c_list = [c, 0, 0, (-1*random.randint(0, 4)), 'F', random.randint(0, base_herds), 'A',
+                  '', -1, base_cow_tbv.item(i), []]
         for r in xrange(len(recessives)):
             c_list[-1].append(base_cow_gt.item(i, r))
         cows.append(c_list)
@@ -200,8 +204,8 @@ def setup(base_bulls=500, base_cows=2500, base_herds=100, force_carriers=True, f
         if b in id_list:
             if debug:
                 print '[setup]: Error! A bull with ID %s already exists in the ID list!' % b
-        b_list = [b, 0, 0, (-1*random.randint(0, 9)), 'M', random.randint(0, base_herds), 'A', '', \
-            -1, base_bull_tbv.item(i), []]
+        b_list = [b, 0, 0, (-1*random.randint(0, 9)), 'M', random.randint(0, base_herds), 'A', '',
+                  -1, base_bull_tbv.item(i), []]
         for r in xrange(len(recessives)):
             b_list[-1].append(base_bull_gt.item(i,r))
         bulls.append(b_list)
@@ -221,7 +225,10 @@ def setup(base_bulls=500, base_cows=2500, base_herds=100, force_carriers=True, f
 
 # <markdowncell>
 
-# Okay, now we've got at least a rough draft of the setup. Now we need to get code in place to simulate generation 1, which can then be generalized to *n* generations. In order to do this, we actually need to make a bunch of decisions. Here's an outline of what needs to happen each generation:
+# Okay, now we've got at least a rough draft of the setup. Now we need to get code in place
+# to simulate generation 1, which can then be generalized to *n* generations. In order to do
+# this, we actually need to make a bunch of decisions. Here's an outline of what needs to happen
+# each generation:
 # 
 # * The generation counter needs to be incremented
 # * We need to mate cows and create their offspring, including genotypes
@@ -236,6 +243,8 @@ def setup(base_bulls=500, base_cows=2500, base_herds=100, force_carriers=True, f
 # recessives    : A Python list of recessives in the population
 # max_matings   : The maximum number of matings permitted for each bull
 # debug         : Flag to activate/deactivate debugging messages
+
+
 def random_mating(cows, bulls, dead_cows, dead_bulls, generation, recessives, max_matings=50, debug=False):
     if max_matings <= 0:
         print "[random_mating]: max_matings cannot be <= 0! Setting to 50."
@@ -318,8 +327,10 @@ def random_mating(cows, bulls, dead_cows, dead_bulls, generation, recessives, ma
 # recessives    : A Python list of recessives in the population
 # pct           : The proportion of bulls to retain for mating
 # debug         : Flag to activate/deactivate debugging messages
-def toppct_mating(cows, bulls, dead_cows, dead_bulls, generation, \
-    recessives, pct=0.10, debug=False):
+
+
+def toppct_mating(cows, bulls, dead_cows, dead_bulls, generation,
+                  recessives, pct=0.10, debug=False):
     if debug:
         print '[toppct_mating]: PARMS:\n\tgeneration: %s\n\trecessives; %s\n\tpct: %s\n\tdebug: %s' % \
             (generation, recessives, pct, debug)
@@ -359,7 +370,7 @@ def toppct_mating(cows, bulls, dead_cows, dead_bulls, generation, \
     #     3. If the bull is alive then use him            
                 if bulls[bull_to_use][6] == 'A':
                     if debug:
-                        print 'bull %s (ID %s) is alive' % ( bull_to_use, bull_id )
+                        print 'bull %s (ID %s) is alive' % (bull_to_use, bull_id)
                     # Create the resulting calf
                     calf = create_new_calf(bulls[bull_to_use], c, recessives, next_id, generation, debug=debug)
                     if debug:
@@ -407,8 +418,11 @@ def toppct_mating(cows, bulls, dead_cows, dead_bulls, generation, \
 # max_matings   : The maximum number of matings permitted for each bull
 # base_herds    : Number of herds in the population.
 # debug         : Flag to activate/deactivate debugging messages
-def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation, \
-    recessives, max_matings=500, base_herds=100, debug=False):
+
+
+def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
+                 recessives, max_matings=500, base_herds=100, debug=False):
+
     if debug:
         print '[pryce_mating]: PARMS:\n\tgeneration: %s\n\tmax_matings: %s\n\tbase_herds: %s\n\tdebug: %s' % \
             (generation, max_matings, base_herds, debug)
@@ -502,7 +516,8 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation, \
     logfile = 'pedigree_%s.log' % generation
     #Several methods can be used:
     # 1 - recursive as in Aguilar & Misztal, 2008 (default)
-    # 2 - recursive but with coefficients store in memory, faster with large number of generations but more memory requirements
+    # 2 - recursive but with coefficients store in memory, faster with large number of
+    #     generations but more memory requirements
     # 3 - method as in Meuwissen & Luo 1992
     callinbupgf90 = ['inbupgf90', '--pedfile', pedfile, '--method', '3', '--yob', '>', logfile, '2>&1&']
     if debug:
@@ -680,6 +695,8 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation, \
 # calf_id       : The ID to be assigned to the new animal
 # generation    : The current generation in the simulation
 # debug         : Flag to activate/deactivate debugging messages
+
+
 def create_new_calf(sire, dam, recessives, calf_id, generation, debug=False):
     # Is it a bull or a heifer?
     if bernoulli.rvs(0.50):
@@ -744,7 +761,7 @@ def create_new_calf(sire, dam, recessives, calf_id, generation, debug=False):
             if random.randint(1, 100001) == 1:
                 if debug:
                     print '\t[create_new_calf]: A mutation in recessive %s (%s) happened when ' \
-                        'bull %s was mated to cow %s to produce animal %s!' % (r, recessives[r][3], \
+                        'bull %s was mated to cow %s to produce animal %s!' % (r, recessives[r][3],
                         sire[0], dam[0], calf_id)
                 calf[-1].append(0)
             else:
@@ -764,6 +781,8 @@ def create_new_calf(sire, dam, recessives, calf_id, generation, debug=False):
 # generation    : The current generation in the simulation
 # max_bulls     : The maximum number of bulls that can be alive at one time
 # debug         : Flag to activate/deactivate debugging messages
+
+
 def cull_bulls(bulls, dead_bulls, generation, max_bulls=250, debug=False):
     if debug:
         print '[cull_bulls]: live bulls: %s' % len(bulls)
@@ -776,13 +795,14 @@ def cull_bulls(bulls, dead_bulls, generation, max_bulls=250, debug=False):
     # This is the age cull
     n_culled = 0
     for b in bulls:
-        if (generation - b[3])  > 10:
+        if (generation - b[3]) > 10:
             b[6] = 'D'            # This bull is dead
             b[7] = 'A'            # From age
             b[8] = generation     # In the current generation
             dead_bulls.append(b)  # Add it to the dead bulls list
             n_culled += 1
-    if debug: print '\t[cull_bulls]: %s bulls culled for age in generation %s (age>10)' % (n_culled, generation)
+    if debug:
+        print '\t[cull_bulls]: %s bulls culled for age in generation %s (age>10)' % (n_culled, generation)
     # Now we have to remove the dead bulls from the bulls list
     bulls[:] = [b for b in bulls if b[6] == 'A']
     # Now we're going to sort on TBV
@@ -790,7 +810,7 @@ def cull_bulls(bulls, dead_bulls, generation, max_bulls=250, debug=False):
     # Check to see if we need to cull on number (count).
     if len(bulls) <= max_bulls:
         if debug:
-            print '\t[cull_bulls]: No bulls culled in generation %s (bulls<max_bulls)' % ( generation )
+            print '\t[cull_bulls]: No bulls culled in generation %s (bulls<max_bulls)' % generation
         return bulls, dead_bulls
     # If this culling is necessary then we need to update the records of the
     # culled bulls and move them into the dead_bulls list. We cull bulls at
@@ -805,8 +825,9 @@ def cull_bulls(bulls, dead_bulls, generation, max_bulls=250, debug=False):
             dead_bulls.append(b)
             n_culled += 1
         bulls = bulls[len(bulls)-max_bulls:]
-        if debug: print '\t[cull_bulls]: %s bulls culled because of excess population in generation %s \
-            (bulls>max_bulls)' % (n_culled, generation)
+        if debug:
+            print '\t[cull_bulls]: %s bulls culled because of excess population in generation %s ' \
+                  '(bulls>max_bulls)' % (n_culled, generation)
         return bulls, dead_bulls
 
 # Print a table showing how many animals of each age are in the population. Returns a
@@ -816,6 +837,8 @@ def cull_bulls(bulls, dead_bulls, generation, max_bulls=250, debug=False):
 # animals       : A list of live animal records
 # generation    : The current generation in the simulation
 # show          : Flag to activate/deactivate printing of the age distribution
+
+
 def age_distn(animals, generation, show=True):
     ages = {}
     for a in animals:
@@ -842,6 +865,8 @@ def age_distn(animals, generation, show=True):
 # max_cows      : The maximum number of cows that can be alive at one time
 # culling_rate  : The proportion of cows culled involuntarily each generation
 # debug         : Flag to activate/deactivate debugging messages
+
+
 def cull_cows(cows, dead_cows, generation, max_cows=0, culling_rate=0.0, debug=False):
     if debug:
         print '[cull_cows]: live cows: %s' % len(cows)
@@ -853,7 +878,7 @@ def cull_cows(cows, dead_cows, generation, max_cows=0, culling_rate=0.0, debug=F
     # This is the age cull
     n_culled = 0
     for c in cows:
-        if ( generation - c[3] ) > 5:
+        if (generation - c[3]) > 5:
             c[6] = 'D'            # This cow is dead
             c[7] = 'A'            # Because of her age
             c[8] = generation     # In the current generation
@@ -866,13 +891,14 @@ def cull_cows(cows, dead_cows, generation, max_cows=0, culling_rate=0.0, debug=F
     if culling_rate > 0:
         n_culled = 0
         for c in cows:
-            if random.uniform(0,1) < culling_rate:
+            if random.uniform(0, 1) < culling_rate:
                 c[6] = 'D'             # This cow is dead
                 c[7] = 'C'             # Because of involuntary culling
                 c[8] = generation      # In the current generation
                 dead_cows.append(c)    # Add it to the dead cows list
                 n_culled += 1
-        if debug: print '\t[cull_cows]: %s cows involuntarily culled in generation %s' % (n_culled, generation)
+        if debug:
+            print '\t[cull_cows]: %s cows involuntarily culled in generation %s' % (n_culled, generation)
     # Now we have to remove the dead animals from the cows list
     cows[:] = [c for c in cows if c[6] == 'A']
     # Now we're going to sort on TBV in ascending order
@@ -896,13 +922,16 @@ def cull_cows(cows, dead_cows, generation, max_cows=0, culling_rate=0.0, debug=F
             c[8] = generation    # In the current generation
             dead_cows.append(c)
         cows = cows[c_diff:]
-        if debug: print '\t[cull_cows]: %s cows were culled to maintain herd size in generation %s (cows>max_cows)' % ( c_diff, generation )
+        if debug: print '\t[cull_cows]: %s cows were culled to maintain herd size in generation %s (cows>max_cows)'\
+                        % (c_diff, generation)
         return cows, dead_cows
 
 # Compute simple summary statistics of TBV for the list of animals passed in:
 #    sample mean
 #    min, max, and count
 #    sample variance and standard deviation
+
+
 def animal_summary(animals):
     total = 0.
     count = 0.
@@ -932,6 +961,8 @@ def animal_summary(animals):
 # The easy way to determine the current MAF for each recessive is to count
 # the number of copies of each "a" allele in the current population of live
 # animals.
+
+
 def update_maf(cows, bulls, generation, recessives, freq_hist):
     minor_allele_counts = []
     for r in recessives:
@@ -965,31 +996,29 @@ def update_maf(cows, bulls, generation, recessives, freq_hist):
         # Is the recessive lethal? Yes?
         if recessives[r][2] == 1:
             # Compute the frequency of the AA and Aa genotypes
-            denom = ( 1. - r_freq)**2 + (2 * r_freq * (1. - r_freq) )
+            denom = (1. - r_freq)**2 + (2 * r_freq * (1. - r_freq))
             f_dom = (1. - r_freq)**2 / denom
             f_het = (2 * r_freq * (1. - r_freq)) / denom
             print
             print '\tRecessive %s (%s), generation %s:' % (r, recessives[r][3], generation)
             print '\t\tminor alleles = %s\t\ttotal alleles = %s' % (minor_allele_counts[r], total_alleles)
             print '\t\tp = %s\t\tq = %s' % ((1. - r_freq), r_freq)
-            print '\t\t  = %s\t\t  = %s' % ( \
-                (1. - r_freq) - (1. - recessives[r-1][0]), \
-                r_freq - recessives[r-1][0])
+            print '\t\t  = %s\t\t  = %s' % ((1. - r_freq) - (1. - recessives[r-1][0]),
+                                            r_freq - recessives[r-1][0])
             print '\t\tf(AA) = %s\t\tf(Aa) = %s' % (f_dom, f_het)
         # Well, okay, so it's not.
         else:
             # Compute the frequency of the AA and Aa genotypes
             f_dom = (1. - r_freq)**2
             f_het = (2 * r_freq * (1. - r_freq))
-            f_rec = (r_freq)**2
+            f_rec = r_freq**2
             print
             print '\tThis recessive is ***NOT LETHAL***'
             print '\tRecessive %s (%s), generation %s:' % (r, recessives[r][3], generation)
             print '\t\tminor alleles = %s\t\ttotal alleles = %s' % (minor_allele_counts[r], total_alleles)
             print '\t\tp = %s\t\tq = %s' % ((1. - r_freq), r_freq)
-            print '\t\t  = %s\t\t  = %s' % ( \
-                (1. - r_freq) - (1. - recessives[r-1][0]), \
-                r_freq - recessives[r-1][0])
+            print '\t\t  = %s\t\t  = %s' % ((1. - r_freq) - (1. - recessives[r-1][0]),
+                                            r_freq - recessives[r-1][0])
             print '\t\tf(AA) = %s\t\tf(Aa) = %s' % (f_dom, f_het)
             print '\t\tf(aa) = %s' % f_rec
         # Finally, update the recessives and history tables
@@ -999,6 +1028,8 @@ def update_maf(cows, bulls, generation, recessives, freq_hist):
 
 # We're going to go ahead and write files containing various pieces
 # of information from the simulation.
+
+
 def write_history_files(cows, bulls, dead_cows, dead_bulls, generation, filetag=''):
     # First, write the animal history files.
     cowfile = 'cows_history%s_%s.txt' % (filetag, generation)
@@ -1066,13 +1097,17 @@ def write_history_files(cows, bulls, dead_cows, dead_bulls, generation, filetag=
 #                     a file is associated with
 # recessives        : A Python list of recessives in the population
 # max_matings   : The maximum number of matings permitted for each bull
-def run_scenario(scenario='random', gens=20, percent=0.10, base_bulls=500, base_cows=2500, \
-    base_herds=100, max_bulls=1500, max_cows=7500, debug=False, filetag='', recessives=[], \
-    max_matings=500):
+
+
+def run_scenario(scenario='random', gens=20, percent=0.10, base_bulls=500, base_cows=2500,
+                 base_herds=100, max_bulls=1500, max_cows=7500, debug=False, filetag='',
+                 recessives=[], max_matings=500):
 
     # This is the initial setup
-    cows, bulls, dead_cows, dead_bulls, freq_hist = setup(base_bulls=base_bulls, \
-        base_cows=base_cows, base_herds=base_herds, recessives=recessives)
+    cows, bulls, dead_cows, dead_bulls, freq_hist = setup(base_bulls=base_bulls,
+                                                          base_cows=base_cows,
+                                                          base_herds=base_herds,
+                                                          recessives=recessives)
 
     # This is the start of the next generation
     for generation in xrange(1, gens+1):
@@ -1080,40 +1115,48 @@ def run_scenario(scenario='random', gens=20, percent=0.10, base_bulls=500, base_
         print
         print 'Generation %s' % generation
         print '\t              \tLC\tLB\tLT\tDC\tDB\tDT'
-        print '\tBefore mating:\t%s\t%s\t%s\t%s\t%s\t%s' % (len(cows), len(bulls), \
-            len(cows)+len(bulls), len(dead_cows), len(dead_bulls), \
-            len(dead_cows)+len(dead_bulls))
+        print '\tBefore mating:\t%s\t%s\t%s\t%s\t%s\t%s' % (len(cows), len(bulls),
+                                                            len(cows)+len(bulls),
+                                                            len(dead_cows), len(dead_bulls),
+                                                            len(dead_cows)+len(dead_bulls))
 
         # This is the code that handles the mating scenarios
 
         # Animals are mated at random with an [optional] limit on the number of matings
         # allowed to each bull.
         if scenario == 'random':
-            cows, bulls, dead_cows, dead_bulls = random_mating(cows, bulls, \
-                    dead_cows, dead_bulls, generation, recessives, max_matings=500)
+            cows, bulls, dead_cows, dead_bulls = random_mating(cows, bulls,
+                                                               dead_cows, dead_bulls, generation,
+                                                               recessives, max_matings=500)
         # Only the top "pct" of bulls, based on TBV, are mater randomly to the cow
         # population with no limit on the number of matings allowed. This is a simple
         # example of truncation selection.
         elif scenario == 'toppct':
-            cows, bulls, dead_cows, dead_bulls = toppct_mating(cows, bulls, \
-                dead_cows, dead_bulls, generation, recessives, pct=percent)
+            cows, bulls, dead_cows, dead_bulls = toppct_mating(cows, bulls,dead_cows,
+                                                               dead_bulls, generation,
+                                                               recessives, pct=percent)
         # Bulls are mated to cows using a mate allocation strategy similar to that of
         # Pryce et al. (2012), in which the PA is discounted to account for decreased
         # fitness associated with increased rates of inbreeding. We're not using genomic
         # information in this study but we assume perfect pedigrees, so everything should
         # work out okay.
         elif scenario == 'pryce':
-            cows, bulls, dead_cows, dead_bulls = pryce_mating(cows, bulls, \
-                dead_cows, dead_bulls, generation, recessives, max_matings=max_matings, \
-                base_herds=base_herds, debug=debug)
+            cows, bulls, dead_cows, dead_bulls = pryce_mating(cows, bulls,
+                                                              dead_cows, dead_bulls,
+                                                              generation, recessives,
+                                                              max_matings=max_matings,
+                                                              base_herds=base_herds,
+                                                              debug=debug)
         # The default scenario is random mating.
         else:
-             cows, bulls, dead_cows, dead_bulls = random_mating(cows, bulls, \
-                dead_cows, dead_bulls, generation, recessives, max_matings=500)
+            cows, bulls, dead_cows, dead_bulls = random_mating(cows, bulls,
+                                                               dead_cows, dead_bulls,
+                                                               generation, recessives,
+                                                               max_matings=500)
     
-        print '\tAfter mating:\t%s\t%s\t%s\t%s\t%s\t%s' % (len(cows), len(bulls), \
-            len(cows)+len(bulls), len(dead_cows), len(dead_bulls), \
-            len(dead_cows)+len(dead_bulls))
+        print '\tAfter mating:\t%s\t%s\t%s\t%s\t%s\t%s' % (len(cows), len(bulls),
+                                                           len(cows)+len(bulls), len(dead_cows),
+                                                           len(dead_bulls), len(dead_cows)+len(dead_bulls))
     
         # Cull bulls
         bbull_count, bbull_min, bbull_max, bbull_mean, bbull_var, bbull_std = animal_summary(bulls)
@@ -1125,9 +1168,9 @@ def run_scenario(scenario='random', gens=20, percent=0.10, base_bulls=500, base_
         cows, dead_cows = cull_cows(cows, dead_cows, generation, max_cows, debug=debug)
         acow_count, acow_min, acow_max, acow_mean, acow_var, acow_std = animal_summary(cows)
 
-        print '\tAfter culling:\t%s\t%s\t%s\t%s\t%s\t%s' % (len(cows), len(bulls), \
-        len(cows)+len(bulls), len(dead_cows), len(dead_bulls), \
-            len(dead_cows)+len(dead_bulls))
+        print '\tAfter culling:\t%s\t%s\t%s\t%s\t%s\t%s' % (len(cows), len(bulls), len(cows)+len(bulls),
+                                                            len(dead_cows), len(dead_bulls),
+                                                            len(dead_cows)+len(dead_bulls))
 
         print
         print '\tSummary statistics for TBV'
@@ -1147,12 +1190,18 @@ def run_scenario(scenario='random', gens=20, percent=0.10, base_bulls=500, base_
     # Save the simulation parameters so that we know what we did.
     outfile = 'simulation_parameters%s.txt' % filetag
     ofh = file(outfile, 'w')
-    outline = 'scenario    :\t%s\n' % scenario ; ofh.write(outline)
-    outline = 'percent     :\t%s\n' % percent ; ofh.write(outline)
-    outline = 'base bulls  :\t%s\n' % base_bulls ; ofh.write(outline)
-    outline = 'base cows   :\t%s\n' % base_cows ; ofh.write(outline)
-    outline = 'max bulls   :\t%s\n' % max_bulls ; ofh.write(outline)
-    outline = 'max cows    :\t%s\n' % max_cows ; ofh.write(outline)
+    outline = 'scenario    :\t%s\n' % scenario
+    ofh.write(outline)
+    outline = 'percent     :\t%s\n' % percent
+    ofh.write(outline)
+    outline = 'base bulls  :\t%s\n' % base_bulls
+    ofh.write(outline)
+    outline = 'base cows   :\t%s\n' % base_cows
+    ofh.write(outline)
+    outline = 'max bulls   :\t%s\n' % max_bulls
+    ofh.write(outline)
+    outline = 'max cows    :\t%s\n' % max_cows
+    ofh.write(outline)
     for r in xrange(len(recessives)):
         outline = 'Base MAF %s :\t%s\n' % (r+1, recessives[r][0])
         ofh.write(outline)
@@ -1163,7 +1212,7 @@ def run_scenario(scenario='random', gens=20, percent=0.10, base_bulls=500, base_
     # Save the allele frequency history
     outfile = 'minor_allele_frequencies%s.txt' % filetag
     ofh = file(outfile, 'w')
-    for k,v in freq_hist.iteritems():
+    for k, v in freq_hist.iteritems():
         outline = '%s' % k
         for frequency in v:
             outline += '\t%s' % frequency
@@ -1186,23 +1235,22 @@ def run_scenario(scenario='random', gens=20, percent=0.10, base_bulls=500, base_
             y.append(v[r])
         ax.plot(x, y, color=colors.next(), marker=markers.next(), label=recessives[r][3])
     ax.legend(loc='best')
-    filename = "MAF_plot_%s_gen_%s_rec_%s.png" % (gens, len(recessives), \
-        scenario)
+    filename = "MAF_plot_%s_gen_%s_rec_%s.png" % (gens, len(recessives), scenario)
     plt.savefig(filename, bbox_inches="tight")
     plt.clf()
 
 if __name__ == '__main__':
 
     # Simulation parameters
-    base_bulls  =   1500         # Initial number of founder bulls in the population
-    base_cows   =  30000         # Initial number of founder cows in the population
-    base_herds  =    150         # Number of herds in the population
-    max_bulls   =   6000         # Maximum number of live bulls to keep each generation
-    max_cows    = 120000         # Maximum number of live cows to keep each generation
-    percent     =     0.10       # Proportion of bulls to use in the toppct scenario
-    generations =    10          # How long to run the simulation
-    max_matings =   200          # The maximum number of matings permitted for each bull
-    debug       = False          # Activate (True) or deactivate (False) debugging messages
+    base_bulls = 1500         # Initial number of founder bulls in the population
+    base_cows = 30000         # Initial number of founder cows in the population
+    base_herds = 150         # Number of herds in the population
+    max_bulls = 6000         # Maximum number of live bulls to keep each generation
+    max_cows = 120000         # Maximum number of live cows to keep each generation
+    percent = 0.10       # Proportion of bulls to use in the toppct scenario
+    generations = 10          # How long to run the simulation
+    max_matings = 200          # The maximum number of matings permitted for each bull
+    debug = False          # Activate (True) or deactivate (False) debugging messages
 
     # Recessives are stored in a list of lists. The first value in each list
     # is the minor allele frequency in the base population, and the second
@@ -1243,7 +1291,7 @@ if __name__ == '__main__':
     # This is the real heart of the analysis, applying Pryce's method.
     print '=' * 80
     recessives = copy.copy(default_recessives)
-    run_scenario(scenario='pryce', percent=percent, base_bulls=base_bulls, \
-        base_cows=base_cows, base_herds=base_herds, max_bulls=max_bulls, max_cows=max_cows, \
-        debug=debug, filetag='_pryce_20_gen_12_rec', recessives=recessives, \
-        gens=generations, max_matings=max_matings)
+    run_scenario(scenario='pryce', percent=percent, base_bulls=base_bulls, base_cows=base_cows,
+                 base_herds=base_herds, max_bulls=max_bulls, max_cows=max_cows, debug=debug,
+                 filetag='_pryce_20_gen_12_rec', recessives=recessives, gens=generations,
+                 max_matings=max_matings)
