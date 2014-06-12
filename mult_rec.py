@@ -144,22 +144,26 @@ def setup(base_bulls=500, base_cows=2500, base_herds=100, force_carriers=True, f
             # A value of 1 assigned to the cow (bull) genotype means "AA", a
             # value of 0 means "Aa", and a value of -1 means "aa".
             for c in xrange(base_cows):
-                # Draw an allele from the sire -- a 0 is an "A", and a 1 is an "a".
+                # Get the cow's genotype -- since the parameter we're
+                # using is the major allele frequency (p), a success (1) is
+                # an "A" allele, and a failure is an "a" allele.
                 s_allele = bernoulli.rvs(1. - r_freq)
                 d_allele = bernoulli.rvs(1. - r_freq)
-                if s_allele == 0 and d_allele == 0:
+                if s_allele == 1 and d_allele == 1:
                     base_cow_gt[c, r] = 1
-                elif s_allele == 1 and d_allele == 1:
+                elif s_allele == 0 and d_allele == 0:
                     base_cow_gt[c, r] = -1
                 else:
                     base_cow_gt[c, r] = 0
             for b in xrange(base_bulls):
-                # Draw an allele from the sire -- a 0 is an "A", and a 1 is an "a".
+                # Get the bull's genotype -- since the parameter we're
+                # using is the major allele frequency (p), a success (1) is
+                # an "A" allele, and a failure is an "a" allele.
                 s_allele = bernoulli.rvs(1. - r_freq)
                 d_allele = bernoulli.rvs(1. - r_freq)
-                if s_allele == 0 and d_allele == 0:
+                if s_allele == 1 and d_allele == 1:
                     base_bull_gt[b, r] = 1
-                elif s_allele == 1 and d_allele == 1:
+                elif s_allele == 0 and d_allele == 0:
                     base_bull_gt[b, r] = -1
                 else:
                     base_bull_gt[b, r] = 0
@@ -405,6 +409,26 @@ def toppct_mating(cows, bulls, dead_cows, dead_bulls, generation,
         print '\t[toppct_mating]: %s animals in final bull list' % len(bulls)
     return cows, bulls, dead_cows, dead_bulls
 
+
+# This function returns the largest animal ID in the population + 1, which
+# is used as the starting ID for the next generation of calves.
+
+
+def get_next_id(cows, bulls, dead_cows, dead_bulls):
+    id_list = []
+    for c in cows:
+        id_list.append(int(c[0]))
+    for dc in dead_cows:
+        id_list.append(int(dc[0]))
+    for b in bulls:
+        id_list.append(int(b[0]))
+    for db in dead_bulls:
+        id_list.append(int(db[0]))
+    id_list.sort()
+    next_id = id_list[-1] + 1
+    return next_id
+
+
 # This routine uses an approach similar to that of Pryce et al. (2012) allocate matings of bulls
 # to cows. Parent averages are discounted for any increase in inbreeding in the progeny, and
 # they are further discounted to account for the effect of recessives on lifetime income.
@@ -441,8 +465,10 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
     # inbreeding of the potential offspring than it is to calculate relationships among parents
     # because the latter requires that we store relationships among all parents.
     #
-    next_id = len(cows) + len(bulls) + len(dead_cows) + len(dead_bulls) + 1
-    print '[pryce_mating]: next_id = %s' % next_id
+    #next_id = len(cows) + len(bulls) + len(dead_cows) + len(dead_bulls) + 1
+    next_id = get_next_id(cows, bulls, dead_cows, dead_bulls)
+    if debug:
+        print '[pryce_mating]: next_id = %s in generation %s' % (next_id, generation)
     matings = {}
     pedigree = []
     id_list = []
@@ -497,7 +523,7 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
                 new_calf = '%s %s %s %s\n' % (calf_id, b[0], c[0], generation+10)
                 pedigree.append(new_calf)
                 calfcount += 1
-                next_id += 1
+                #next_id += 1
     if debug:
         print '[pryce_mating]: %s calves added to pedigree in generation %s' % \
             (calfcount, generation)
@@ -686,6 +712,7 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
 
     return cows, bulls, dead_cows, dead_bulls
 
+
 # I finally had to refactor the create-a-calf code into its own subroutine. This function
 # returns a new animal record.
 #
@@ -717,7 +744,8 @@ def create_new_calf(sire, dam, recessives, calf_id, generation, debug=False):
     b_gt = sire[-1]
     for r in xrange(len(recessives)):
         # The simplest way to do this is to draw a gamete from each parent and
-        # construct the calf's genotype from there.
+        # construct the calf's genotype from there. In the recessives array, a
+        # 1 indicates an AA, 0 is an Aa, and a -1 is aa.
         #
         # Draw an allele from the sire -- a 0 is an "A", and a 1 is an "a".
         if b_gt[r] == 1:                       # AA genotype
@@ -770,6 +798,7 @@ def create_new_calf(sire, dam, recessives, calf_id, generation, debug=False):
         else:
             calf[-1].append(0)
     return calf
+
 
 # This routine culls bulls each generation. The rules used are:
 # 1.  Bulls cannot be more than 10 years old
@@ -854,6 +883,7 @@ def age_distn(animals, generation, show=True):
             print '\t%s:\t\t%s' % (k, ages[k])
     return ages
 
+
 # This routine culls cows each generation. The rules used are:
 # 1.  Cows cannot be more than 5 years old
 # 2.  There is an [optional] involuntary cull at a user-specified rate 
@@ -926,6 +956,7 @@ def cull_cows(cows, dead_cows, generation, max_cows=0, culling_rate=0.0, debug=F
                         % (c_diff, generation)
         return cows, dead_cows
 
+
 # Compute simple summary statistics of TBV for the list of animals passed in:
 #    sample mean
 #    min, max, and count
@@ -957,6 +988,7 @@ def animal_summary(animals):
         samplevar = (1 / (count-1)) * (sumsq - (sumx**2 / count))
         samplestd = math.sqrt(samplevar)
     return count, tmin, tmax, samplemean, samplevar, samplestd
+
 
 # The easy way to determine the current MAF for each recessive is to count
 # the number of copies of each "a" allele in the current population of live
@@ -1026,6 +1058,7 @@ def update_maf(cows, bulls, generation, recessives, freq_hist):
         freq_hist[generation].append(r_freq)
     return recessives, freq_hist
 
+
 # We're going to go ahead and write files containing various pieces
 # of information from the simulation.
 
@@ -1079,6 +1112,7 @@ def write_history_files(cows, bulls, dead_cows, dead_bulls, generation, filetag=
         outline += '\n'
         ofh.write(outline)
     ofh.close()
+
 
 # Main loop for individual simulation scenarios.
 #
@@ -1239,16 +1273,18 @@ def run_scenario(scenario='random', gens=20, percent=0.10, base_bulls=500, base_
     plt.savefig(filename, bbox_inches="tight")
     plt.clf()
 
+
 if __name__ == '__main__':
 
+
     # Simulation parameters
-    base_bulls = 1500         # Initial number of founder bulls in the population
-    base_cows = 30000         # Initial number of founder cows in the population
-    base_herds = 150         # Number of herds in the population
-    max_bulls = 6000         # Maximum number of live bulls to keep each generation
-    max_cows = 120000         # Maximum number of live cows to keep each generation
+    base_bulls = 150         # Initial number of founder bulls in the population
+    base_cows = 3000         # Initial number of founder cows in the population
+    base_herds = 15         # Number of herds in the population
+    max_bulls = 600         # Maximum number of live bulls to keep each generation
+    max_cows = 12000         # Maximum number of live cows to keep each generation
     percent = 0.10       # Proportion of bulls to use in the toppct scenario
-    generations = 10          # How long to run the simulation
+    generations = 30          # How long to run the simulation
     max_matings = 200          # The maximum number of matings permitted for each bull
     debug = False          # Activate (True) or deactivate (False) debugging messages
 
