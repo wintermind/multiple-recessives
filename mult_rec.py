@@ -584,10 +584,12 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
         # If there is a hit on this key, then it means that the bull was
         # used in the herd in which the cow lives.
         try:
+            # Update the matrix of inbreeding coefficients.
+            f_mat[bidx, cidx] = inbr[calf_id]
+            # Now, we need to adjust the parent averages to account for
+            # inbreeding effects, and the economic impacts of the recessives.
             b_mat[bidx, cidx] = (0.5 * (b[8] + c[8])) - \
                 (inbr[calf_id] * 100 * flambda)
-            # Now, we need to adjust the parent averages to account for
-            # the economic impacts of the recessives.
             for r in xrange(len(recessives)):
                 # What are the parent genotypes?
                 b_gt = b[-1][r]
@@ -606,8 +608,6 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
                     # so the PA is adjusted by 1/4 of the "value" of an
                     # aa calf.
                     b_mat[bidx, cidx] -= (0.25 * recessives[r][1])
-            # ...and update the matrix of inbreeding coefficients.
-            f_mat[bidx, cidx] = inbr[calf_id]
         # If there is not matching key in the dictionary, then that
         # cow-bull combination was not evaluated, which means the bull
         # was not used in the same herd as the cow. We're setting those
@@ -953,7 +953,9 @@ def cull_cows(cows, dead_cows, generation, max_cows=0, culling_rate=0.0, debug=F
     # Now we have to remove the dead animals from the cows list
     cows[:] = [c for c in cows if c[6] == 'A']
     # Now we're going to sort on TBV in ascending order
-    cows.sort(key=lambda x: x[9])
+    #cows.sort(key=lambda x: x[9])
+    # Instead of culling from only the low tail, we'll cull at random.
+    random.shuffle(cows)
     # Check to see if we need to cull on number (count).
     if max_cows == 0:
         if debug:
