@@ -473,7 +473,7 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
     pedigree = []
     id_list = []
     for c in cows:
-        new_cow = '%s %s %s %s\n' % (c[0], c[1], c[2], c[3]+10)
+        new_cow = '%s %s %s %s\n' % (c[0], c[1], c[2], c[3]+10)         # INBUPGF90 doesn't like negative birth years.
         pedigree.append(new_cow)
         if c[0] not in id_list:
             id_list.append(c[0])
@@ -586,6 +586,27 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
         try:
             b_mat[bidx, cidx] = (0.5 * (b[8] + c[8])) - \
                 (inbr[calf_id] * 100 * flambda)
+            # Now, we need to adjust the parent averages to account for
+            # the economic impacts of the recessives.
+            for r in xrange(len(recessives)):
+                # What are the parent genotypes?
+                b_gt = b[-1][r]
+                c_gt = c[-1][r]
+                if b_gt == -1 and c_gt == -1:           # aa genotypes
+                    # The calf will definitely be affected, so we adjust
+                    # the parent average by the full "value" of an aa
+                    # calf.
+                    b_mat[bidx, cidx] -= recessives[r][1]
+                elif b_gt == 1 and c_gt == 1:           # AA genotypes
+                    # The calf cannot be aa, so there is no adjustment to
+                    # the parent average.
+                    pass
+                else:
+                    # There is a 1/4 chance of having an affected calf,
+                    # so the PA is adjusted by 1/4 of the "value" of an
+                    # aa calf.
+                    b_mat[bidx, cidx] -= (0.25 * recessives[r][1])
+            # ...and update the matrix of inbreeding coefficients.
             f_mat[bidx, cidx] = inbr[calf_id]
         # If there is not matching key in the dictionary, then that
         # cow-bull combination was not evaluated, which means the bull
@@ -1284,7 +1305,7 @@ if __name__ == '__main__':
     max_bulls = 600         # Maximum number of live bulls to keep each generation
     max_cows = 12000         # Maximum number of live cows to keep each generation
     percent = 0.10       # Proportion of bulls to use in the toppct scenario
-    generations = 30          # How long to run the simulation
+    generations = 10          # How long to run the simulation
     max_matings = 200          # The maximum number of matings permitted for each bull
     debug = False          # Activate (True) or deactivate (False) debugging messages
 
