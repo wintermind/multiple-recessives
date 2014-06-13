@@ -343,7 +343,7 @@ def toppct_mating(cows, bulls, dead_cows, dead_bulls, generation,
         print '[toppct_mating]: %s is outside of the range 0.0 <= pct <= 1.0, changing to 0.10' % ( pct )
         pct = 0.10
     # Sort bulls on TBV in ascending order
-    bulls.sort(key=lambda x: x[8])
+    bulls.sort(key=lambda x: x[9])
     # How many do we keep?
     b2k = int(pct*len(bulls))
     if debug:
@@ -588,7 +588,7 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
             f_mat[bidx, cidx] = inbr[calf_id]
             # Now, we need to adjust the parent averages to account for
             # inbreeding effects, and the economic impacts of the recessives.
-            b_mat[bidx, cidx] = (0.5 * (b[8] + c[8])) - \
+            b_mat[bidx, cidx] = (0.5 * (b[9] + c[9])) - \
                 (inbr[calf_id] * 100 * flambda)
             for r in xrange(len(recessives)):
                 # What are the parent genotypes?
