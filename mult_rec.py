@@ -34,13 +34,14 @@ from scipy.stats import bernoulli
 #    recessives:            Dictionary of recessive alleles in the population.
 #    check_tbv:             If True, plot histograms showing the distribution of
 #                           the sire and dam TBV in the base population.
-#    rng_key:                An integer used to see the random number generation. If
-#                           False, a default value of 8675309 is used.
+#    rng_kseed:             An integer used to seed the random number generation. If
+#                           None, a random seed as described in the Python documentation
+#                           is used.
 #    debug                  Flag to activate/deactivate debugging messages.
 
 
 def setup(base_bulls=500, base_cows=2500, base_herds=100, force_carriers=True, force_best=True,
-          recessives=[], check_tbv=False, rng_key=False, debug=True):
+          recessives=[], check_tbv=False, rng_seed=None, debug=True):
 
     # Base population parameters
     generation = 0                  # The simulation starts at generation 0. It's as though we're all C programmers.
@@ -52,12 +53,13 @@ def setup(base_bulls=500, base_cows=2500, base_herds=100, force_carriers=True, f
         sys.exit(1)
 
     # Seed the RNG
-    try:
-        np.random.seed(int(rng_key))
-    except:
-        np.random.seed(8675309)     # There was only one other option. Who can guess what it is?
-        # If you want a random seed instead, you can change the previous line to:
-        # np.random.seed()
+    if rng_seed:
+        try:
+            np.random.seed(int(rng_seed))
+        except:
+            np.random.seed()
+    else:
+        np.random.seed()
 
     # The mean and standard deviation of the trait used to rank animals and make mating
     # decisions. The values here are for lifetime net merit in US dollars.
@@ -211,7 +213,7 @@ def setup(base_bulls=500, base_cows=2500, base_herds=100, force_carriers=True, f
         b_list = [b, 0, 0, (-1*random.randint(0, 9)), 'M', random.randint(0, base_herds), 'A', '',
                   -1, base_bull_tbv.item(i), []]
         for r in xrange(len(recessives)):
-            b_list[-1].append(base_bull_gt.item(i,r))
+            b_list[-1].append(base_bull_gt.item(i, r))
         bulls.append(b_list)
         id_list.append(b)
 
@@ -340,7 +342,7 @@ def toppct_mating(cows, bulls, dead_cows, dead_bulls, generation,
             (generation, recessives, pct, debug)
     # Never trust users, they are lying liars
     if pct < 0.0 or pct > 1.0:
-        print '[toppct_mating]: %s is outside of the range 0.0 <= pct <= 1.0, changing to 0.10' % ( pct )
+        print '[toppct_mating]: %s is outside of the range 0.0 <= pct <= 1.0, changing to 0.10' % pct
         pct = 0.10
     # Sort bulls on TBV in ascending order
     bulls.sort(key=lambda x: x[9])
@@ -465,7 +467,6 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
     # inbreeding of the potential offspring than it is to calculate relationships among parents
     # because the latter requires that we store relationships among all parents.
     #
-    #next_id = len(cows) + len(bulls) + len(dead_cows) + len(dead_bulls) + 1
     next_id = get_next_id(cows, bulls, dead_cows, dead_bulls)
     if debug:
         print '[pryce_mating]: next_id = %s in generation %s' % (next_id, generation)
@@ -755,7 +756,7 @@ def create_new_calf(sire, dam, recessives, calf_id, generation, debug=False):
     tbv = (sire[9] + dam[9]) * 0.5
     # Add a Mendelian sampling term -- in this case, it's set to
     # +/- 1 genetic SD.
-    tbv += (random.uniform(-1., 1.) * 200)
+    tbv += (random.normalvariate(0, 1) * 200)
     # Form the animal record. Note that heifers are born into the same herd as their
     # dam.
     calf = [calf_id, sire[0], dam[0], generation, sex, dam[5], 'A', '', -1, tbv, []]
@@ -984,6 +985,8 @@ def cull_cows(cows, dead_cows, generation, max_cows=0, culling_rate=0.0, debug=F
 #    sample mean
 #    min, max, and count
 #    sample variance and standard deviation
+#
+# animals          : A list of animal records
 
 
 def animal_summary(animals):
@@ -1016,6 +1019,12 @@ def animal_summary(animals):
 # The easy way to determine the current MAF for each recessive is to count
 # the number of copies of each "a" allele in the current population of live
 # animals.
+#
+# cows          : A list of live cow records
+# bulls         : A list of live bull records
+# generation    : The current generation in the simulation
+# recessives    : A Python list of recessives in the population
+# freq_hist     : A dictionary of minor allele frequencies for each generation
 
 
 def update_maf(cows, bulls, generation, recessives, freq_hist):
@@ -1084,7 +1093,14 @@ def update_maf(cows, bulls, generation, recessives, freq_hist):
 
 # We're going to go ahead and write files containing various pieces
 # of information from the simulation.
-
+#
+# cows          : A list of live cow records
+# bulls         : A list of live bull records
+# dead_cows     : A list of dead cow records
+# dead_bulls    : A list of dead bull records
+# generation    : The current generation in the simulation
+# filetag       : String added to a filename to better describe what analysis
+#                 a file is associated with
 
 def write_history_files(cows, bulls, dead_cows, dead_bulls, generation, filetag=''):
     # First, write the animal history files.
@@ -1158,13 +1174,14 @@ def write_history_files(cows, bulls, dead_cows, dead_bulls, generation, filetag=
 
 def run_scenario(scenario='random', gens=20, percent=0.10, base_bulls=500, base_cows=2500,
                  base_herds=100, max_bulls=1500, max_cows=7500, debug=False, filetag='',
-                 recessives=[], max_matings=500):
+                 recessives=[], max_matings=500, rng_seed=None):
 
     # This is the initial setup
     cows, bulls, dead_cows, dead_bulls, freq_hist = setup(base_bulls=base_bulls,
                                                           base_cows=base_cows,
                                                           base_herds=base_herds,
-                                                          recessives=recessives)
+                                                          recessives=recessives,
+                                                          rng_seed=rng_seed)
 
     # This is the start of the next generation
     for generation in xrange(1, gens+1):
@@ -1280,6 +1297,7 @@ def run_scenario(scenario='random', gens=20, percent=0.10, base_bulls=500, base_
     # Now that we're done with the simulation let's go ahead and visualize the change in minor allele frequency
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
+    ax.set_ylim(0.0, 1.0)
     ax.set_title("MAF change over time")
     ax.set_xlabel("Generation")
     ax.set_ylabel("Minor allele frequency")
@@ -1334,18 +1352,19 @@ if __name__ == '__main__':
     ]
 
     # First, run the random mating scenario
-#    print '=' * 80
-#    recessives = copy.copy(default_recessives)
-#    run_scenario(scenario='random', base_bulls=base_bulls, base_cows=base_cows, \
-#        max_bulls=max_bulls, max_cows=max_cows, filetag='_ran_20_gen_1_rec_polled', \
-#        recessives=recessives)
+    print '=' * 80
+    recessives = copy.copy(default_recessives)
+    run_scenario(scenario='random', base_bulls=base_bulls, base_cows=base_cows,
+        max_bulls=max_bulls, max_cows=max_cows, filetag='_ran_20_gen_1_rec_polled',
+        recessives=recessives, rng_seed=None)
 
     # Now run truncation selection, just to introduce some genetic trend.
-#    print '=' * 80
-#    recessives = copy.copy(default_recessives)
-#    run_scenario(scenario='toppct', percent=percent, base_bulls=base_bulls, \
-#        base_cows=base_cows, max_bulls=max_bulls, max_cows=max_cows, \
-#        filetag='_toppct_20_gen_1_rec_polled', recessives=recessives)
+    print '=' * 80
+    recessives = copy.copy(default_recessives)
+    run_scenario(scenario='toppct', percent=percent, base_bulls=base_bulls,
+        base_cows=base_cows, max_bulls=max_bulls, max_cows=max_cows,
+        filetag='_toppct_20_gen_1_rec_polled', recessives=recessives,
+        rng_seed=None)
 
     # This is the real heart of the analysis, applying Pryce's method.
     print '=' * 80
@@ -1353,4 +1372,4 @@ if __name__ == '__main__':
     run_scenario(scenario='pryce', percent=percent, base_bulls=base_bulls, base_cows=base_cows,
                  base_herds=base_herds, max_bulls=max_bulls, max_cows=max_cows, debug=debug,
                  filetag='_pryce_20_gen_12_rec', recessives=recessives, gens=generations,
-                 max_matings=max_matings)
+                 max_matings=max_matings, rng_seed=None)
