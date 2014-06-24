@@ -6,6 +6,7 @@
 # + Matings will be based on parent averages, and at-risk matings will be penalized by the economic
 #   value of each recessive.
 
+
 # Import standard libraries
 import copy
 import itertools
@@ -23,6 +24,7 @@ from matplotlib.pyplot import plot, hist
 import numpy as np
 import numpy.ma as ma
 from scipy.stats import bernoulli
+
 
 # Setup the simulation
 #    base_bulls:            Number of bulls in the base population (founders)
@@ -228,8 +230,6 @@ def setup(base_bulls=500, base_cows=2500, base_herds=100, force_carriers=True, f
 
     return cows, bulls, dead_cows, dead_bulls, freq_hist
 
-
-# <markdowncell>
 
 # Okay, now we've got at least a rough draft of the setup. Now we need to get code in place
 # to simulate generation 1, which can then be generalized to *n* generations. In order to do
@@ -1319,15 +1319,15 @@ if __name__ == '__main__':
 
 
     # Simulation parameters
-    base_bulls = 150         # Initial number of founder bulls in the population
-    base_cows = 3000         # Initial number of founder cows in the population
-    base_herds = 15         # Number of herds in the population
-    max_bulls = 600         # Maximum number of live bulls to keep each generation
-    max_cows = 12000         # Maximum number of live cows to keep each generation
-    percent = 0.10       # Proportion of bulls to use in the toppct scenario
-    generations = 10          # How long to run the simulation
-    max_matings = 200          # The maximum number of matings permitted for each bull
-    debug = False          # Activate (True) or deactivate (False) debugging messages
+    base_bulls = 50         # Initial number of founder bulls in the population
+    base_cows = 5000        # Initial number of founder cows in the population
+    base_herds = 50         # Number of herds in the population
+    max_bulls = 500         # Maximum number of live bulls to keep each generation
+    max_cows = 50000        # Maximum number of live cows to keep each generation
+    percent = 0.10          # Proportion of bulls to use in the toppct scenario
+    generations = 20        # How long to run the simulation
+    max_matings = 150       # The maximum number of matings permitted for each bull
+    debug = False           # Activate (True) or deactivate (False) debugging messages
 
     # Recessives are stored in a list of lists. The first value in each list
     # is the minor allele frequency in the base population, and the second
