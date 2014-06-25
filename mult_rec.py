@@ -9,6 +9,7 @@
 
 # Import standard libraries
 import copy
+import datetime
 import itertools
 import math
 import random
@@ -513,8 +514,8 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
         random.shuffle(bulls)               # Randomly assign bulls to cows
         herd_bulls = bulls[0:n_bulls+1]
         herd_cows = [c for c in cows if c[5] == herd]
-        if debug:
-            print '[pryce_mating]: herd_bulls:\n\n%s' % herd_bulls
+        #if debug:
+        #    print '[pryce_mating]: herd_bulls:\n\n%s' % herd_bulls
         for b in herd_bulls:
             for c in herd_cows:
                 calf_id = str(b[0])+'00'+str(c[0])
@@ -865,11 +866,12 @@ def create_new_calf(sire, dam, recessives, calf_id, generation, debug=False):
 def cull_bulls(bulls, dead_bulls, generation, max_bulls=250, debug=False):
     if debug:
         print '[cull_bulls]: live bulls: %s' % len(bulls)
-        print '[cull_cows]: dead bulls: %s' % len(dead_bulls)
+        print '[cull_bulls]: dead bulls: %s' % len(dead_bulls)
     if max_bulls <= 0:
         print "[cull_bulls]: max_bulls cannot be <= 0! Setting to 250."
         max_bulls = 250
     if debug:
+        print "[cull_bulls]: Computing age distribution."
         age_distn(bulls, generation)
     # This is the age cull
     n_culled = 0
@@ -922,7 +924,7 @@ def age_distn(animals, generation, show=True):
     ages = {}
     for a in animals:
         age = generation - a[3]
-        if not ages.has_key(age):
+        if age not in ages.keys():
             ages[age] = 0
         ages[age] += 1
     if show:
@@ -955,6 +957,9 @@ def cull_cows(cows, dead_cows, generation, max_cows=0, culling_rate=0.0, debug=F
     if max_cows < 0:
         print "[cull_cows]: max_cows cannot be < 0! Setting to 0."
         max_cows = 0
+    if debug:
+        print "[cull_cows]: Computing age distribution."
+        age_distn(cows, generation)
     # This is the age cull
     n_culled = 0
     for c in cows:
@@ -1205,6 +1210,7 @@ def run_scenario(scenario='random', gens=20, percent=0.10, base_bulls=500, base_
                  recessives=[], max_matings=500, rng_seed=None):
 
     # This is the initial setup
+    print '[run_scenario]: Setting-up the simulation at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     cows, bulls, dead_cows, dead_bulls, freq_hist = setup(base_bulls=base_bulls,
                                                           base_cows=base_cows,
                                                           base_herds=base_herds,
@@ -1213,11 +1219,12 @@ def run_scenario(scenario='random', gens=20, percent=0.10, base_bulls=500, base_
 
     # This is the start of the next generation
     for generation in xrange(1, gens+1):
+        print '\n[run_scenario]: Beginning generation %s at %s' % (generation, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
         # First, mate the animals, which creates new offspring
         print
-        print 'Generation %s' % generation
-        print '\t              \tLC\tLB\tLT\tDC\tDB\tDT'
-        print '\tBefore mating:\t%s\t%s\t%s\t%s\t%s\t%s' % (len(cows), len(bulls),
+        print '\tGeneration %s' % generation
+        print '\t\t              \tLC\tLB\tLT\tDC\tDB\tDT'
+        print '\t\tBefore mating:\t%s\t%s\t%s\t%s\t%s\t%s' % (len(cows), len(bulls),
                                                             len(cows)+len(bulls),
                                                             len(dead_cows), len(dead_bulls),
                                                             len(dead_cows)+len(dead_bulls))
@@ -1227,6 +1234,8 @@ def run_scenario(scenario='random', gens=20, percent=0.10, base_bulls=500, base_
         # Animals are mated at random with an [optional] limit on the number of matings
         # allowed to each bull.
         if scenario == 'random':
+            print '\n[run_scenario]: Mating cows randomly at %s' % \
+                  datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
             cows, bulls, dead_cows, dead_bulls = random_mating(cows, bulls,
                                                                dead_cows, dead_bulls, generation,
                                                                recessives, max_matings=500)
@@ -1234,6 +1243,8 @@ def run_scenario(scenario='random', gens=20, percent=0.10, base_bulls=500, base_
         # population with no limit on the number of matings allowed. This is a simple
         # example of truncation selection.
         elif scenario == 'toppct':
+            print '\n[run_scenario]: Mating cows using truncation selection at %s' % \
+                  datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
             cows, bulls, dead_cows, dead_bulls = toppct_mating(cows, bulls,dead_cows,
                                                                dead_bulls, generation,
                                                                recessives, pct=percent)
@@ -1243,6 +1254,8 @@ def run_scenario(scenario='random', gens=20, percent=0.10, base_bulls=500, base_
         # information in this study but we assume perfect pedigrees, so everything should
         # work out okay.
         elif scenario == 'pryce':
+            print '\n[run_scenario]: Mating cows using Pryce\'s method at %s' % \
+                  datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
             cows, bulls, dead_cows, dead_bulls = pryce_mating(cows, bulls,
                                                               dead_cows, dead_bulls,
                                                               generation, recessives,
@@ -1255,39 +1268,55 @@ def run_scenario(scenario='random', gens=20, percent=0.10, base_bulls=500, base_
                                                                dead_cows, dead_bulls,
                                                                generation, recessives,
                                                                max_matings=500)
-    
-        print '\tAfter mating:\t%s\t%s\t%s\t%s\t%s\t%s' % (len(cows), len(bulls),
+
+        print '\n'
+        print '\t\t             \tLC\tLB\tLT\tDC\tDB\tDT'
+        print '\t\tAfter mating:\t%s\t%s\t%s\t%s\t%s\t%s' % (len(cows), len(bulls),
                                                            len(cows)+len(bulls), len(dead_cows),
                                                            len(dead_bulls), len(dead_cows)+len(dead_bulls))
     
         # Cull bulls
+        print '\n[run_scenario]: Computing summary statistics for bulls before culling at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         bbull_count, bbull_min, bbull_max, bbull_mean, bbull_var, bbull_std = animal_summary(bulls)
+        print '[run_scenario]: Culling bulls at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         bulls, dead_bulls = cull_bulls(bulls, dead_bulls, generation, max_bulls, debug=debug)
+        print '\n[run_scenario]: Computing summary statistics for bulls after culling at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         abull_count, abull_min, abull_max, abull_mean, abull_var, abull_std = animal_summary(bulls)
 
         # Cull cows
+        print '\n[run_scenario]: Computing summary statistics for cows before culling at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         bcow_count, bcow_min, bcow_max, bcow_mean, bcow_var, bcow_std = animal_summary(cows)
+        print '[run_scenario]: Culling cows at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         cows, dead_cows = cull_cows(cows, dead_cows, generation, max_cows, debug=debug)
+        print '[run_scenario]: Computing summary statistics for cows after culling at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         acow_count, acow_min, acow_max, acow_mean, acow_var, acow_std = animal_summary(cows)
 
-        print '\tAfter culling:\t%s\t%s\t%s\t%s\t%s\t%s' % (len(cows), len(bulls), len(cows)+len(bulls),
+        print '\t\t              \tLC\tLB\tLT\tDC\tDB\tDT'
+        print '\t\tAfter culling:\t%s\t%s\t%s\t%s\t%s\t%s' % (len(cows), len(bulls), len(cows)+len(bulls),
                                                             len(dead_cows), len(dead_bulls),
                                                             len(dead_cows)+len(dead_bulls))
 
         print
-        print '\tSummary statistics for TBV'
-        print '\t--------------------------'
-        print '\t    \t    \tN\tMin\t\tMax\t\tMean\t\tStd'
-        print '\tBull\tpre \t%s\t%s\t%s\t%s\t%s' % (int(bbull_count), bbull_min, bbull_max, bbull_mean, bbull_std)
-        print '\tBull\tpost\t%s\t%s\t%s\t%s\t%s' % (int(abull_count), abull_min, abull_max, abull_mean, abull_std)
-        print '\tCow \tpre \t%s\t%s\t%s\t%s\t%s' % (int(bcow_count), bcow_min, bcow_max, bcow_mean, bcow_std)
-        print '\tCow \tpost\t%s\t%s\t%s\t%s\t%s' % (int(acow_count), acow_min, acow_max, acow_mean, acow_std)
+        print '\t\tSummary statistics for TBV'
+        print '\t\t--------------------------'
+        print '\t\t    \t    \tN\tMin\t\tMax\t\tMean\t\tStd'
+        print '\t\tBull\tpre \t%s\t%s\t%s\t%s\t%s' % (int(bbull_count), bbull_min, bbull_max, bbull_mean, bbull_std)
+        print '\t\tBull\tpost\t%s\t%s\t%s\t%s\t%s' % (int(abull_count), abull_min, abull_max, abull_mean, abull_std)
+        print '\t\tCow \tpre \t%s\t%s\t%s\t%s\t%s' % (int(bcow_count), bcow_min, bcow_max, bcow_mean, bcow_std)
+        print '\t\tCow \tpost\t%s\t%s\t%s\t%s\t%s' % (int(acow_count), acow_min, acow_max, acow_mean, acow_std)
 
         # Now update the MAF for the recessives in the population
+        print '\n[run_scenario]: Updating minor allele frequencies at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         recessives, freq_hist = update_maf(cows, bulls, generation, recessives, freq_hist)
 
         # Write history files
+        print '\n[run_scenario]: Writing history files at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         write_history_files(cows, bulls, dead_cows, dead_bulls, generation, filetag)
+
+        # We don't do anything with the dead cow and dead bull lists, so let's not keep them in memory
+        # clogging things up.
+        dead_cows = []
+        dead_bulls = []
 
     # Save the simulation parameters so that we know what we did.
     outfile = 'simulation_parameters%s.txt' % filetag
