@@ -11,9 +11,10 @@
 import copy
 import itertools
 import math
+import random
 import subprocess
 import sys
-import random
+import time
 
 # Import external libraries
 import matplotlib
@@ -540,17 +541,44 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
     ofh.close()
     # PyPedal is just too slow when the pedigrees are large (e.g., millons of records), so
     # we're going to use Ignacio Aguilar's INBUPGF90 program.
+    #
+    # Per an e-mail from Ignacio Aguilar on 06/25/2014, INBUPGF90 does NOT emit a proper
+    # status return code when it exits, which makes it tricky to know for sure when the
+    # job is done. I've observed a number of cases where the simulation appears to stall
+    # because subprocess.call() does not recognize that INBUPGF90 has finished a job. So,
+    # I've cobbled-together a solution using ideas from Ezequiel Nicolazzi
+    # (https://github.com/nicolazzie/AffyPipe/blob/master/AffyPipe.py) and a post on
+    # Stack Overflow (http://stackoverflow.com/questions/12057794/
+    # python-using-popen-poll-on-background-process). I'm not 100% sure that this works
+    # as intended, but I'm out of ideas.
     logfile = 'pedigree_%s.log' % generation
     #Several methods can be used:
     # 1 - recursive as in Aguilar & Misztal, 2008 (default)
     # 2 - recursive but with coefficients store in memory, faster with large number of
     #     generations but more memory requirements
     # 3 - method as in Meuwissen & Luo 1992
-    callinbupgf90 = ['inbupgf90', '--pedfile', pedfile, '--method', '3', '--yob', '>', logfile, '2>&1&']
     if debug:
-        print '[pryce_mating]: Calling inbupgf90 to calculate COI:\n\t%s' % callinbupgf90
-    subprocess.call(callinbupgf90, shell=False)
-    #print '[pryce_mating]: inbupgf90 returned code ',  p.stdout.read()
+        print '[pryce_mating]: Started inbupgf90 to calculate COI at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    callinbupgf90 = ['inbupgf90', '--pedfile', pedfile, '--method', '3', '--yob', '>', logfile, '2>&1&']
+    time_waited = 0
+    p = subprocess.Popen(callinbupgf90, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    while p.poll() is None:
+        # Wait 1 second between pokes with a sharp stick.
+        time.sleep(1)
+        time_waited += 1
+        p.poll()
+        if time_waited % 15 == 0:
+            if debug:
+                print '\t[pryce_mating]: Waiting for INBUPGF90 to finish -- %s seconds so far...' % time_waited
+    # Pick-up the output from INBUPGF90
+    (results, errors) = p.communicate()
+    if debug:
+        if errors == '':
+            print '\t[pryce_mating]: INBUPGF90 finished without problems!'
+            #print '\t[pryce_mating]: results: %s' % results
+        else:
+            print '\t[pryce_mating]: errors: %s' % errors
+        print '[pryce_mating]: Finished inbupgf90 to calculate COI at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
 
     # Load the COI into a dictionary keyed by original animal ID
     coifile = 'pedigree_%s.txt.solinb' % generation
