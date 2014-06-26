@@ -452,16 +452,16 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
                  recessives, max_matings=500, base_herds=100, debug=False):
 
     if debug:
-        print '[pryce_mating]: PARMS:\n\tgeneration: %s\n\tmax_matings: %s\n\tbase_herds: %s\n\tdebug: %s' % \
-            (generation, max_matings, base_herds, debug)
+        print '\t[pryce_mating]: Parameters:\n\t\tgeneration: %s\n\t\tmax_matings: %s\n\t\tbase_herds: ' \
+              '%s\n\t\tdebug: %s\n\t\tRecessives:' % (generation, max_matings, base_herds, debug)
         for r in recessives:
-            print '\t%s' % r
+            print '\t\t\t%s' % r
     # Never trust users, they are lying liars
     if max_matings < 0:
-        print '[pryce_mating]: %s is less than 0, changing num_matings to 500.' % max_matings
+        print '\t[pryce_mating]: %s is less than 0, changing num_matings to 500.' % max_matings
         max_matings = 500
     if not type(max_matings) is int:
-        print '[pryce_mating]: % is not not an integer, changing num_matings to 500.' % max_matings
+        print '\t[pryce_mating]: % is not not an integer, changing num_matings to 500.' % max_matings
     #
     # Now, we're going to need to construct a pedigree that includes matings of all cows in
     # each herd to the bulls randomly assigned to that herd. Bulls are randomly assigned to
@@ -469,77 +469,116 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
     # inbreeding of the potential offspring than it is to calculate relationships among parents
     # because the latter requires that we store relationships among all parents.
     #
+    # I'm going to try and allocate a fixed-length NumPy array large enough to store the entire
+    # pedigree to avoid memory fragmentation/swapping when working with large Python lists. If that
+    # can't be done, I'll fall back to a list. This does mean that the code has to accommodate both
+    # cases, so it's a little verbose.
     next_id = get_next_id(cows, bulls, dead_cows, dead_bulls)
     if debug:
-        print '[pryce_mating]: next_id = %s in generation %s' % (next_id, generation)
+        print '\t[pryce_mating]: next_id = %s in generation %s' % (next_id, generation)
     matings = {}
-    pedigree = []
+    pedigree_size = len(cows) + len(dead_cows) + len(bulls) + len(dead_bulls)
+    # Note that I'm including a fudge factor by multiplying the bulls by 2 so that we get an
+    # array longer than we need.
+    pedigree_size += int((2*len(bulls)) * len(cows)) / base_herds
+    try:
+        pedigree = np.zeros((pedigree_size,), dtype=('a20,a20,a20,i4'))
+        print '\t[pryce_mating]: Allocated a NumPy array of size %s to store pedigree at %s' % \
+              (pedigree_size, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
+    except MemoryError:
+        pedigree = []
+        print '\t[pryce_mating]: Could not allocate a NumPy array of size %s, falling-back to a SLOWWWW Python list at %s' % \
+              (pedigree_size, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
     id_list = []
+    pedigree_counter = 0
+    if debug:
+        print '\t[pryce_mating]: Putting all cows and herd bulls in a pedigree at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     for c in cows:
-        new_cow = '%s %s %s %s\n' % (c[0], c[1], c[2], c[3]+10)         # INBUPGF90 doesn't like negative birth years.
-        pedigree.append(new_cow)
+        if isinstance(pedigree, (np.ndarray, np.generic)):
+            pedigree[pedigree_counter] = (c[0], c[1], c[2], c[3]+10)
+        else:
+            pedigree.append(' '.join([c[0], c[1], c[2], c[3]+10,'\n']))
+        pedigree_counter += 1
         if c[0] not in id_list:
             id_list.append(c[0])
     for dc in dead_cows:
-        dead_cow = '%s %s %s %s\n' % (dc[0], dc[1], dc[2], dc[3]+10)
-        pedigree.append(dead_cow)
+        if isinstance(pedigree, (np.ndarray, np.generic)):
+            pedigree[pedigree_counter] = (dc[0], dc[1], dc[2], dc[3]+10)
+        else:
+            pedigree.append(' '.join([dc[0], dc[1], dc[2], dc[3]+10,'\n']))
+        pedigree_counter += 1
         if dc[0] not in id_list:
             id_list.append(dc[0])
     for b in bulls:
-        new_bull = '%s %s %s %s\n' % (b[0], b[1], b[2], b[3]+10)
-        pedigree.append(new_bull)
+        if isinstance(pedigree, (np.ndarray, np.generic)):
+            pedigree[pedigree_counter] = (b[0], b[1], b[2], b[3]+10)
+        else:
+            pedigree.append(' '.join([b[0], b[1], b[2], b[3]+10,'\n']))
+        pedigree_counter += 1
         if b[0] not in id_list:
             id_list.append(b[0])
         matings[b[0]] = 0
     for db in dead_bulls:
-        dead_bull = '%s %s %s %s\n' % (db[0], db[1], db[2], db[3]+10)
-        pedigree.append(dead_bull)
+        if isinstance(pedigree, (np.ndarray, np.generic)):
+            pedigree[pedigree_counter] = (db[0], db[1], db[2], db[3]+10)
+        else:
+            pedigree.append(' '.join([db[0], db[1], db[2], db[3]+10,'\n']))
+        pedigree_counter += 1
         if db[0] not in id_list:
             id_list.append(db[0])
     if debug:
-        print '[pryce_mating]: %s "old" animals in pedigree in generation %s' % \
-            (len(pedigree), generation)
+        print '\t[pryce_mating]: %s "old" animals in pedigree in generation %s at %s' % \
+            (len(pedigree), generation, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
     # Now we need to create faux offspring of the living bulls and cows because it is faster to
     # compute inbreeding than relationships.
     calfcount = 0
     n_bulls = int(round(len(bulls) / base_herds, 0))
     if debug:
-        print '[pryce_mating]: base_herds: %s' % base_herds
-        print '[pryce_mating]: len(bulls): %s' % len(bulls)
-        print '[pryce_mating]: len(bulls) / base_herds: %s' % (float(len(bulls)) / float(base_herds))
-        print '[pryce_mating]: round(len(bulls) / base_herds, 0): %s' % (round(len(bulls) / base_herds, 0))
-        print '[pryce_mating]: int(round(len(bulls) / base_herds, 0)): %s' % (int(round(len(bulls) / base_herds, 0)))
-        print '[pryce_mating]: n_bulls: %s' % n_bulls
+        #print '\t[pryce_mating]: base_herds: %s' % base_herds
+        #print '\t[pryce_mating]: len(bulls): %s' % len(bulls)
+        #print '\t[pryce_mating]: len(bulls) / base_herds: %s' % (float(len(bulls)) / float(base_herds))
+        #print '\t[pryce_mating]: round(len(bulls) / base_herds, 0): %s' % (round(len(bulls) / base_herds, 0))
+        #print '\t[pryce_mating]: int(round(len(bulls) / base_herds, 0)): %s' % (int(round(len(bulls) / base_herds, 0)))
+        #print '\t[pryce_mating]: n_bulls: %s' % n_bulls
+        print '\t[pryce_mating]: Mating all cows to all herd bulls at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    pedigree_array = isinstance(pedigree, (np.ndarray, np.generic))
     for herd in xrange(base_herds):
         random.shuffle(bulls)               # Randomly assign bulls to cows
         herd_bulls = bulls[0:n_bulls+1]
         herd_cows = [c for c in cows if c[5] == herd]
-        #if debug:
-        #    print '[pryce_mating]: herd_bulls:\n\n%s' % herd_bulls
         for b in herd_bulls:
             for c in herd_cows:
                 calf_id = str(b[0])+'00'+str(c[0])
                 if calf_id in id_list:
                     if debug:
-                        print '\t[pryce_mating]: Error! A calf with ID %s already exists in the ID list in \
+                        print '\t\t[pryce_mating]: Error! A calf with ID %s already exists in the ID list in \
                             generation %s!' % (calf_id, generation)
-                new_calf = '%s %s %s %s\n' % (calf_id, b[0], c[0], generation+10)
-                pedigree.append(new_calf)
+                if pedigree_array:
+                    pedigree[pedigree_counter] = (c[0], c[1], c[2], c[3]+10)
+                else:
+                    pedigree.append(' '.join([c[0], c[1], c[2], c[3]+10,'\n']))
+                pedigree_counter += 1
                 calfcount += 1
-                #next_id += 1
     if debug:
-        print '[pryce_mating]: %s calves added to pedigree in generation %s' % \
-            (calfcount, generation)
-        print '[pryce_mating]: %s total animals in pedigree in generation %s' % \
-            (len(pedigree), generation)
+        print '\t\t[pryce_mating]: %s calves added to pedigree in generation %s at %s' % \
+            (calfcount, generation, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
+        print '\t\t[pryce_mating]: %s total animals in pedigree in generation %s at %s' % \
+            (len(pedigree), generation, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
     # Write the pedigree to a file.
     pedfile = 'pedigree_%s.txt' % generation
     if debug:
-        print '[pryce_mating]: Writing pedigree to %s' % pedfile
+        print '\t[pryce_mating]: Writing pedigree to %s at %s' % \
+              (pedfile, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
     ofh = file(pedfile, 'w')
-    for p in pedigree:
-        ofh.write(p)
+    if isinstance(pedigree, (np.ndarray, np.generic)):
+        for pidx in xrange(pedigree_counter):
+            p = ' '.join([pedigree[pidx][0], pedigree[pidx][1], pedigree[pidx][2], pedigree[pidx][3]])
+            ofh.write(p)
+    else:
+        for p in pedigree:
+            ofh.write(p)
     ofh.close()
+    del pedigree
     # PyPedal is just too slow when the pedigrees are large (e.g., millons of records), so
     # we're going to use Ignacio Aguilar's INBUPGF90 program.
     #
@@ -559,7 +598,7 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
     #     generations but more memory requirements
     # 3 - method as in Meuwissen & Luo 1992
     if debug:
-        print '[pryce_mating]: Started inbupgf90 to calculate COI at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+        print '\t[pryce_mating]: Started inbupgf90 to calculate COI at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     callinbupgf90 = ['inbupgf90', '--pedfile', pedfile, '--method', '3', '--yob', '>', logfile, '2>&1&']
     time_waited = 0
     p = subprocess.Popen(callinbupgf90, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -570,22 +609,23 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
         p.poll()
         if time_waited % 15 == 0:
             if debug:
-                print '\t[pryce_mating]: Waiting for INBUPGF90 to finish -- %s seconds so far...' % time_waited
+                print '\t\t[pryce_mating]: Waiting for INBUPGF90 to finish -- %s seconds so far...' % time_waited
     # Pick-up the output from INBUPGF90
     (results, errors) = p.communicate()
     if debug:
         if errors == '':
-            print '\t[pryce_mating]: INBUPGF90 finished without problems!'
+            print '\t\t[pryce_mating]: INBUPGF90 finished without problems at %s!' % \
+                datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
             #print '\t[pryce_mating]: results: %s' % results
         else:
-            print '\t[pryce_mating]: errors: %s' % errors
-        print '[pryce_mating]: Finished inbupgf90 to calculate COI at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+            print '\t\t[pryce_mating]: errors: %s' % errors
+        print '\t[pryce_mating]: Finished inbupgf90 to calculate COI at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
 
     # Load the COI into a dictionary keyed by original animal ID
     coifile = 'pedigree_%s.txt.solinb' % generation
     if debug:
-        print '[pryce_mating]: Putting coefficients of inbreeding from %s.solinb in a dictionary' \
-            % pedfile
+        print '\t[pryce_mating]: Putting coefficients of inbreeding from %s.solinb in a dictionary at %s' \
+            % (pedfile, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
     inbr = {}
     ifh = open(coifile, 'r')
     for line in ifh:
@@ -603,7 +643,7 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
     b_mat = ma.zeros((len(bulls), len(cows)))
     f_mat = ma.zeros((len(bulls), len(cows)))
     if debug:
-        print '[pryce_mating]: Populating B_0'
+        print '\t[pryce_mating]: Populating B_0 at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     bids = [b[0] for b in bulls]
     cids = [c[0] for c in cows]
     for b in bulls:
@@ -667,15 +707,16 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
     new_bulls = []
     new_cows = []
     if debug:
-        print '\t[pryce_mating]: Beginning loop to assign mates and update M_0'
+        print '\t[pryce_mating]: Beginning loop to assign mates and update M_0 at %s' % \
+            datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     for c in cows:
         if c[6] == 'A':
             # What column in b_mat corresponds to cow c?
             cow_loc = cow_id_list.index(c[0])
             # Get a vector of indices that would result in a sorted list.
             sorted_bulls = ma.argsort(b_mat[:, cow_loc])
-            if debug:
-                print '\t[pryce_mating]: sorted_bulls has %s animals' % len(sorted_bulls)
+            #if debug:
+            #     print '\t[pryce_mating]: sorted_bulls has %s animals' % len(sorted_bulls)
             # The first element in sorted_sires is the index of
             # the smallest element in b_mat[:,cow_loc]. The
             # last element in sorted_sires is the index of the
@@ -717,10 +758,12 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
                     break
 
     if debug:
-        print '\t[pryce_mating]: %s animals in original cow list' % len(cows)
-        print '\t[pryce_mating]: %s animals in new cow list' % len(new_cows)
-        print '\t[pryce_mating]: %s animals in original bull list' % len(bulls)
-        print '\t[pryce_mating]: %s animals in new bull list' % len(new_bulls)
+        print '\t[pryce_mating]: Finished assigning mates and updating M_0 at %s' % \
+            datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+        print '\t\t[pryce_mating]: %s animals in original cow list' % len(cows)
+        print '\t\t[pryce_mating]: %s animals in new cow list' % len(new_cows)
+        print '\t\t[pryce_mating]: %s animals in original bull list' % len(bulls)
+        print '\t\t[pryce_mating]: %s animals in new bull list' % len(new_bulls)
     for nc in new_cows:
         if nc[6] == 'A':
             cows.append(nc)
@@ -732,34 +775,10 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
         else:
             dead_bulls.append(nb)
     if debug:
-        print '\t[pryce_mating]: %s animals in final live cow list' % len(cows)
-        print '\t[pryce_mating]: %s animals in final dead cow list' % len(dead_cows)
-        print '\t[pryce_mating]: %s animals in final live bull list' % len(bulls)
-        print '\t[pryce_mating]: %s animals in final dead bull list' % len(dead_bulls)
-
-    # if debug:
-    #     # The D_mat and F_mat matrices are used to compute summary statistics
-    #     # for the offspring PTA and coefficients of inbreeding.
-    #     #d_mat = ma.zeros(())
-    #     d_mat = b_mat * m_mat
-    #     f_mat = f_mat * m_mat
-    #
-    #     print 'b_mat: %s' % b_mat
-    #     print 'd_mat: %s' % d_mat
-    #     print 'f_mat: %s' % f_mat
-    #     print 'm_mat: %s' % m_mat
-    #
-    #     # We might need ", skipna=True".
-    #     print
-    #     print '\t[pryce_mating]: Average PTA in D_mat            : ', ma.average(d_mat.sum(axis=0))
-    #     print '\t[pryce_mating]: Std. dev. of PTA in D_mat       : ', ma.std(d_mat.sum(axis=0))
-    #     print '\t[pryce_mating]: Minimum PTA in D_mat            : ', ma.min(d_mat.sum(axis=0))
-    #     print '\t[pryce_mating]: Maximum PTA in D_mat            : ', ma.max(d_mat.sum(axis=0))
-    #     print
-    #     print '\t[pryce_mating]: Average inbreeding in F_mat     : ', ma.average(f_mat.sum(axis=0))
-    #     print '\t[pryce_mating]: Std. dev. of inbreeding in F_mat: ', ma.std(f_mat.sum(axis=0))
-    #     print '\t[pryce_mating]: Minimum inbreeding in F_mat     : ', ma.min(f_mat.sum(axis=0))
-    #     print '\t[pryce_mating]: Maximum inbreeding in F_mat     : ', ma.max(f_mat.sum(axis=0))
+        print '\t\t[pryce_mating]: %s animals in final live cow list' % len(cows)
+        print '\t\t[pryce_mating]: %s animals in final dead cow list' % len(dead_cows)
+        print '\t\t[pryce_mating]: %s animals in final live bull list' % len(bulls)
+        print '\t\t[pryce_mating]: %s animals in final dead bull list' % len(dead_bulls)
 
     return cows, bulls, dead_cows, dead_bulls
 
@@ -1269,7 +1288,7 @@ def run_scenario(scenario='random', gens=20, percent=0.10, base_bulls=500, base_
                                                                generation, recessives,
                                                                max_matings=500)
 
-        print '\n'
+        print
         print '\t\t             \tLC\tLB\tLT\tDC\tDB\tDT'
         print '\t\tAfter mating:\t%s\t%s\t%s\t%s\t%s\t%s' % (len(cows), len(bulls),
                                                            len(cows)+len(bulls), len(dead_cows),
@@ -1278,7 +1297,7 @@ def run_scenario(scenario='random', gens=20, percent=0.10, base_bulls=500, base_
         # Cull bulls
         print '\n[run_scenario]: Computing summary statistics for bulls before culling at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         bbull_count, bbull_min, bbull_max, bbull_mean, bbull_var, bbull_std = animal_summary(bulls)
-        print '[run_scenario]: Culling bulls at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+        print '\n[run_scenario]: Culling bulls at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         bulls, dead_bulls = cull_bulls(bulls, dead_bulls, generation, max_bulls, debug=debug)
         print '\n[run_scenario]: Computing summary statistics for bulls after culling at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         abull_count, abull_min, abull_max, abull_mean, abull_var, abull_std = animal_summary(bulls)
@@ -1286,11 +1305,12 @@ def run_scenario(scenario='random', gens=20, percent=0.10, base_bulls=500, base_
         # Cull cows
         print '\n[run_scenario]: Computing summary statistics for cows before culling at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         bcow_count, bcow_min, bcow_max, bcow_mean, bcow_var, bcow_std = animal_summary(cows)
-        print '[run_scenario]: Culling cows at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+        print '\n[run_scenario]: Culling cows at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         cows, dead_cows = cull_cows(cows, dead_cows, generation, max_cows, debug=debug)
-        print '[run_scenario]: Computing summary statistics for cows after culling at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+        print '\n[run_scenario]: Computing summary statistics for cows after culling at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         acow_count, acow_min, acow_max, acow_mean, acow_var, acow_std = animal_summary(cows)
 
+        print
         print '\t\t              \tLC\tLB\tLT\tDC\tDB\tDT'
         print '\t\tAfter culling:\t%s\t%s\t%s\t%s\t%s\t%s' % (len(cows), len(bulls), len(cows)+len(bulls),
                                                             len(dead_cows), len(dead_bulls),
@@ -1314,9 +1334,9 @@ def run_scenario(scenario='random', gens=20, percent=0.10, base_bulls=500, base_
         write_history_files(cows, bulls, dead_cows, dead_bulls, generation, filetag)
 
         # We don't do anything with the dead cow and dead bull lists, so let's not keep them in memory
-        # clogging things up.
-        dead_cows = []
-        dead_bulls = []
+        # clogging things up. D'oh! This is not true -- the dead animals are used for the pedigree...
+        #dead_cows = []
+        #dead_bulls = []
 
     # Save the simulation parameters so that we know what we did.
     outfile = 'simulation_parameters%s.txt' % filetag
