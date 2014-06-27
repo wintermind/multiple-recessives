@@ -528,7 +528,7 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
                 id_list.append(db[0])
         pedigree_counter += 1
     if pedigree_array:
-        id_list = pedigree[:,0].tolist()
+        id_list = pedigree[:][0].tolist()
     if debug:
         print '\t[pryce_mating]: %s "old" animals in pedigree in generation %s at %s' % \
             (len(pedigree), generation, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
