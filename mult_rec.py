@@ -491,41 +491,44 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
               (pedigree_size, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
     id_list = []
     pedigree_counter = 0
+    pedigree_array = isinstance(pedigree, (np.ndarray, np.generic))
     if debug:
         print '\t[pryce_mating]: Putting all cows and herd bulls in a pedigree at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     for c in cows:
-        if isinstance(pedigree, (np.ndarray, np.generic)):
+        if pedigree_array:
             pedigree[pedigree_counter] = (c[0], c[1], c[2], c[3]+10)
         else:
             pedigree.append(' '.join([c[0], c[1], c[2], c[3]+10,'\n']))
+            if c[0] not in id_list:
+                id_list.append(c[0])
         pedigree_counter += 1
-        if c[0] not in id_list:
-            id_list.append(c[0])
     for dc in dead_cows:
-        if isinstance(pedigree, (np.ndarray, np.generic)):
+        if pedigree_array:
             pedigree[pedigree_counter] = (dc[0], dc[1], dc[2], dc[3]+10)
         else:
             pedigree.append(' '.join([dc[0], dc[1], dc[2], dc[3]+10,'\n']))
+            if dc[0] not in id_list:
+                id_list.append(dc[0])
         pedigree_counter += 1
-        if dc[0] not in id_list:
-            id_list.append(dc[0])
     for b in bulls:
-        if isinstance(pedigree, (np.ndarray, np.generic)):
+        if pedigree_array:
             pedigree[pedigree_counter] = (b[0], b[1], b[2], b[3]+10)
         else:
             pedigree.append(' '.join([b[0], b[1], b[2], b[3]+10,'\n']))
+            if b[0] not in id_list:
+                id_list.append(b[0])
         pedigree_counter += 1
-        if b[0] not in id_list:
-            id_list.append(b[0])
         matings[b[0]] = 0
     for db in dead_bulls:
         if isinstance(pedigree, (np.ndarray, np.generic)):
             pedigree[pedigree_counter] = (db[0], db[1], db[2], db[3]+10)
         else:
             pedigree.append(' '.join([db[0], db[1], db[2], db[3]+10,'\n']))
+            if db[0] not in id_list:
+                id_list.append(db[0])
         pedigree_counter += 1
-        if db[0] not in id_list:
-            id_list.append(db[0])
+    if pedigree_array:
+        id_list = pedigree[:,0].tolist()
     if debug:
         print '\t[pryce_mating]: %s "old" animals in pedigree in generation %s at %s' % \
             (len(pedigree), generation, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
@@ -541,11 +544,15 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
         #print '\t[pryce_mating]: int(round(len(bulls) / base_herds, 0)): %s' % (int(round(len(bulls) / base_herds, 0)))
         #print '\t[pryce_mating]: n_bulls: %s' % n_bulls
         print '\t[pryce_mating]: Mating all cows to all herd bulls at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-    pedigree_array = isinstance(pedigree, (np.ndarray, np.generic))
     for herd in xrange(base_herds):
+        if debug:
+            print '\t\t[pryce_mating]: Shuffling bulls at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         random.shuffle(bulls)               # Randomly assign bulls to cows
         herd_bulls = bulls[0:n_bulls+1]
         herd_cows = [c for c in cows if c[5] == herd]
+        if debug:
+            print '\t\t[pryce_mating]: Beginning loop to make calves for herd %s at %s' %\
+                  (herd, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
         for b in herd_bulls:
             for c in herd_cows:
                 calf_id = str(b[0])+'00'+str(c[0])
@@ -559,6 +566,9 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
                     pedigree.append(' '.join([c[0], c[1], c[2], c[3]+10,'\n']))
                 pedigree_counter += 1
                 calfcount += 1
+        if debug:
+            print '\t\t[pryce_mating]: Finished loop to make calves for herd %s at %s' % \
+                  (herd, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
     if debug:
         print '\t\t[pryce_mating]: %s calves added to pedigree in generation %s at %s' % \
             (calfcount, generation, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
@@ -572,7 +582,7 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
     ofh = file(pedfile, 'w')
     if isinstance(pedigree, (np.ndarray, np.generic)):
         for pidx in xrange(pedigree_counter):
-            p = ' '.join([pedigree[pidx][0], pedigree[pidx][1], pedigree[pidx][2], pedigree[pidx][3]])
+            p = ' '.join([pedigree[pidx][0], pedigree[pidx][1], pedigree[pidx][2], str(pedigree[pidx][3])])
             ofh.write(p)
     else:
         for p in pedigree:
