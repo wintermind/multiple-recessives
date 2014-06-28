@@ -531,7 +531,7 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
         id_list = pedigree[:][0].tolist()
     if debug:
         print '\t[pryce_mating]: %s "old" animals in pedigree in generation %s at %s' % \
-            (len(pedigree), generation, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
+            (pedigree_counter, generation, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
     # Now we need to create faux offspring of the living bulls and cows because it is faster to
     # compute inbreeding than relationships.
     calfcount = 0
@@ -573,7 +573,7 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
         print '\t\t[pryce_mating]: %s calves added to pedigree in generation %s at %s' % \
             (calfcount, generation, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
         print '\t\t[pryce_mating]: %s total animals in pedigree in generation %s at %s' % \
-            (len(pedigree), generation, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
+            (pedigree_counter, generation, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
     # Write the pedigree to a file.
     pedfile = 'pedigree_%s.txt' % generation
     if debug:
@@ -614,12 +614,11 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
     p = subprocess.Popen(callinbupgf90, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     while p.poll() is None:
         # Wait 1 second between pokes with a sharp stick.
-        time.sleep(1)
-        time_waited += 1
+        time.sleep(10)
+        time_waited += 10
         p.poll()
-        if time_waited % 15 == 0:
-            if debug:
-                print '\t\t[pryce_mating]: Waiting for INBUPGF90 to finish -- %s seconds so far...' % time_waited
+        if time_waited % 60 == 0 and debug:
+            print '\t\t[pryce_mating]: Waiting for INBUPGF90 to finish -- %s minutes so far...' % int(time_waited/60)
     # Pick-up the output from INBUPGF90
     (results, errors) = p.communicate()
     if debug:
@@ -916,19 +915,18 @@ def cull_bulls(bulls, dead_bulls, generation, max_bulls=250, debug=False):
         print '\t[cull_bulls]: %s bulls culled for age in generation %s (age>10)' % (n_culled, generation)
     # Now we have to remove the dead bulls from the bulls list
     bulls[:] = [b for b in bulls if b[6] == 'A']
-    # Now we're going to sort on TBV
-    bulls.sort(key=lambda x: x[9])
     # Check to see if we need to cull on number (count).
     if len(bulls) <= max_bulls:
         if debug:
             print '\t[cull_bulls]: No bulls culled in generation %s (bulls<max_bulls)' % generation
         return bulls, dead_bulls
     # If this culling is necessary then we need to update the records of the
-    # culled bulls and move them into the dead_bulls list. We cull bulls at
-    # random.
+    # culled bulls and move them into the dead_bulls list. We cull bulls on
+    # TBV.
     else:
+        # Now we're going to sort on TBV in ascending order
+        bulls.sort(key=lambda x: x[9])
         n_culled = 0
-        random.shuffle(bulls)
         for b in bulls[0:len(bulls)-max_bulls-1]:
             b[6] = 'D'           # This bull is dead
             b[7] = 'N'           # Because there were too many of them
@@ -1386,7 +1384,7 @@ def run_scenario(scenario='random', gens=20, percent=0.10, base_bulls=500, base_
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
     ax.set_ylim(0.0, 1.0)
-    ax.set_title("MAF change over time")
+    ax.set_title("MAF change over time (%s)" % scenario)
     ax.set_xlabel("Generation")
     ax.set_ylabel("Minor allele frequency")
     x = freq_hist.keys()
@@ -1440,14 +1438,14 @@ if __name__ == '__main__':
 
     # First, run the random mating scenario
     print '=' * 80
-    recessives = copy.copy(default_recessives)
+    recessives = copy.deepcopy(default_recessives)
     run_scenario(scenario='random', base_bulls=base_bulls, base_cows=base_cows,
         max_bulls=max_bulls, max_cows=max_cows, filetag='_ran_20_gen_1_rec_polled',
         recessives=recessives, rng_seed=None)
 
     # Now run truncation selection, just to introduce some genetic trend.
     print '=' * 80
-    recessives = copy.copy(default_recessives)
+    recessives = copy.deepcopy(default_recessives)
     run_scenario(scenario='toppct', percent=percent, base_bulls=base_bulls,
         base_cows=base_cows, max_bulls=max_bulls, max_cows=max_cows,
         filetag='_toppct_20_gen_1_rec_polled', recessives=recessives,
@@ -1455,7 +1453,7 @@ if __name__ == '__main__':
 
     # This is the real heart of the analysis, applying Pryce's method.
     print '=' * 80
-    recessives = copy.copy(default_recessives)
+    recessives = copy.deepcopy(default_recessives)
     run_scenario(scenario='pryce', percent=percent, base_bulls=base_bulls, base_cows=base_cows,
                  base_herds=base_herds, max_bulls=max_bulls, max_cows=max_cows, debug=debug,
                  filetag='_pryce_20_gen_12_rec', recessives=recessives, gens=generations,
