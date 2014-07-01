@@ -1342,11 +1342,6 @@ def run_scenario(scenario='random', gens=20, percent=0.10, base_bulls=500, base_
         print '\n[run_scenario]: Writing history files at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         write_history_files(cows, bulls, dead_cows, dead_bulls, generation, filetag)
 
-        # We don't do anything with the dead cow and dead bull lists, so let's not keep them in memory
-        # clogging things up. D'oh! This is not true -- the dead animals are used for the pedigree...
-        #dead_cows = []
-        #dead_bulls = []
-
     # Save the simulation parameters so that we know what we did.
     outfile = 'simulation_parameters%s.txt' % filetag
     ofh = file(outfile, 'w')
@@ -1358,6 +1353,8 @@ def run_scenario(scenario='random', gens=20, percent=0.10, base_bulls=500, base_
     ofh.write(outline)
     outline = 'base cows   :\t%s\n' % base_cows
     ofh.write(outline)
+    outline = 'base herds  :\t%s\n' % base_herds
+    ofh.write(outline)
     outline = 'max bulls   :\t%s\n' % max_bulls
     ofh.write(outline)
     outline = 'max cows    :\t%s\n' % max_cows
@@ -1367,6 +1364,12 @@ def run_scenario(scenario='random', gens=20, percent=0.10, base_bulls=500, base_
         ofh.write(outline)
         outline = 'Cost %s     :\t%s\n' % (r+1, recessives[r][1])
         ofh.write(outline)
+    outline = 'Debug       :\t%s\n' % debug
+    ofh.write(outline)
+    outline = 'Filetag     :\t%s\n' % filetag
+    ofh.write(outline)
+    outline = 'RNG seed    :\t%s\n' % rng_seed
+    ofh.write(outline)
     ofh.close()
 
     # Save the allele frequency history
@@ -1432,7 +1435,7 @@ if __name__ == '__main__':
         [0.0137,  70, 1, 'CVM'],
         [0.0001,  40, 1, 'DUMPS'],
         [0.0007, 150, 1, 'Mulefoot'],
-        [0.71,   -20, 0, 'Polled'],
+        [0.0071, -20, 0, 'Polled'],
         [0.0542,  20, 0, 'Red'],
     ]
 
@@ -1440,7 +1443,7 @@ if __name__ == '__main__':
     print '=' * 80
     recessives = copy.deepcopy(default_recessives)
     run_scenario(scenario='random', base_bulls=base_bulls, base_cows=base_cows,
-        max_bulls=max_bulls, max_cows=max_cows, filetag='_ran_20_gen_1_rec_polled',
+        max_bulls=max_bulls, max_cows=max_cows, filetag='_ran_20_gen_12_rec',
         recessives=recessives, rng_seed=None)
 
     # Now run truncation selection, just to introduce some genetic trend.
@@ -1448,7 +1451,7 @@ if __name__ == '__main__':
     recessives = copy.deepcopy(default_recessives)
     run_scenario(scenario='toppct', percent=percent, base_bulls=base_bulls,
         base_cows=base_cows, max_bulls=max_bulls, max_cows=max_cows,
-        filetag='_toppct_20_gen_1_rec_polled', recessives=recessives,
+        filetag='_toppct_20_gen_12_rec', recessives=recessives,
         rng_seed=None)
 
     # This is the real heart of the analysis, applying Pryce's method.
