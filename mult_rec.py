@@ -446,10 +446,12 @@ def get_next_id(cows, bulls, dead_cows, dead_bulls):
 # max_matings   : The maximum number of matings permitted for each bull
 # base_herds    : Number of herds in the population.
 # debug         : Flag to activate/deactivate debugging messages
+# penalty       : If True, adjust PA for recessives, else adjust only for inbreeding
 
 
 def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
-                 recessives, max_matings=500, base_herds=100, debug=False):
+                 recessives, max_matings=500, base_herds=100, debug=False,
+                 penalty=False):
 
     if debug:
         print '\t[pryce_mating]: Parameters:\n\t\tgeneration: %s\n\t\tmax_matings: %s\n\t\tbase_herds: ' \
@@ -670,24 +672,28 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
             # inbreeding effects, and the economic impacts of the recessives.
             b_mat[bidx, cidx] = (0.5 * (b[9] + c[9])) - \
                 (inbr[calf_id] * 100 * flambda)
-            for r in xrange(len(recessives)):
-                # What are the parent genotypes?
-                b_gt = b[-1][r]
-                c_gt = c[-1][r]
-                if b_gt == -1 and c_gt == -1:           # aa genotypes
-                    # The calf will definitely be affected, so we adjust
-                    # the parent average by the full "value" of an aa
-                    # calf.
-                    b_mat[bidx, cidx] -= recessives[r][1]
-                elif b_gt == 1 and c_gt == 1:           # AA genotypes
-                    # The calf cannot be aa, so there is no adjustment to
-                    # the parent average.
-                    pass
-                else:
-                    # There is a 1/4 chance of having an affected calf,
-                    # so the PA is adjusted by 1/4 of the "value" of an
-                    # aa calf.
-                    b_mat[bidx, cidx] -= (0.25 * recessives[r][1])
+            # If the penalty flag is set (True) then adjust the PA of the mating to account
+            # for the effects of recessives on the offspring. If this flag is not set then
+            # results should be similar to those of Pryce et al. (2012).
+            if penalty:
+                for r in xrange(len(recessives)):
+                    # What are the parent genotypes?
+                    b_gt = b[-1][r]
+                    c_gt = c[-1][r]
+                    if b_gt == -1 and c_gt == -1:           # aa genotypes
+                        # The calf will definitely be affected, so we adjust
+                        # the parent average by the full "value" of an aa
+                        # calf.
+                        b_mat[bidx, cidx] -= recessives[r][1]
+                    elif b_gt == 1 and c_gt == 1:           # AA genotypes
+                        # The calf cannot be aa, so there is no adjustment to
+                        # the parent average.
+                        pass
+                    else:
+                        # There is a 1/4 chance of having an affected calf,
+                        # so the PA is adjusted by 1/4 of the "value" of an
+                        # aa calf.
+                        b_mat[bidx, cidx] -= (0.25 * recessives[r][1])
         # If there is not matching key in the dictionary, then that
         # cow-bull combination was not evaluated, which means the bull
         # was not used in the same herd as the cow. We're setting those
@@ -1289,7 +1295,25 @@ def run_scenario(scenario='random', gens=20, percent=0.10, base_bulls=500, base_
                                                               generation, recessives,
                                                               max_matings=max_matings,
                                                               base_herds=base_herds,
-                                                              debug=debug)
+                                                              debug=debug,
+                                                              penalty=False)
+        # Bulls are mated to cows using a mate allocation strategy similar to that of
+        # Pryce et al. (2012), in which the PA is discounted to account for decreased
+        # fitness associated with increased rates of inbreeding. We're not using genomic
+        # information in this study but we assume perfect pedigrees, so everything should
+        # work out okay. In addition, the PA are adjusted to account for the effects of
+        # the recessives carried by the parents.
+        elif scenario == 'pryce_r':
+            print '\n[run_scenario]: Mating cows using Pryce\'s method and accounting for recessives at %s' % \
+                  datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+            cows, bulls, dead_cows, dead_bulls = pryce_mating(cows, bulls,
+                                                              dead_cows, dead_bulls,
+                                                              generation, recessives,
+                                                              max_matings=max_matings,
+                                                              base_herds=base_herds,
+                                                              debug=debug,
+                                                              penalty=True)
+
         # The default scenario is random mating.
         else:
             cows, bulls, dead_cows, dead_bulls = random_mating(cows, bulls,
@@ -1454,10 +1478,20 @@ if __name__ == '__main__':
         filetag='_toppct_20_gen_12_rec', recessives=recessives,
         rng_seed=None)
 
-    # This is the real heart of the analysis, applying Pryce's method.
+    # This is the real heart of the analysis, applying Pryce's method, which accounts for
+    # inbreeding but NOT for recessives.
     print '=' * 80
     recessives = copy.deepcopy(default_recessives)
     run_scenario(scenario='pryce', percent=percent, base_bulls=base_bulls, base_cows=base_cows,
                  base_herds=base_herds, max_bulls=max_bulls, max_cows=max_cows, debug=debug,
                  filetag='_pryce_20_gen_12_rec', recessives=recessives, gens=generations,
+                 max_matings=max_matings, rng_seed=None)
+
+    # The 'pryce_r' scenario applies Pryce's method, which accounts for inbreeding
+    # and also for recessive effects.
+    print '=' * 80
+    recessives = copy.deepcopy(default_recessives)
+    run_scenario(scenario='pryce_r', percent=percent, base_bulls=base_bulls, base_cows=base_cows,
+                 base_herds=base_herds, max_bulls=max_bulls, max_cows=max_cows, debug=debug,
+                 filetag='_pryce_r_20_gen_12_rec', recessives=recessives, gens=generations,
                  max_matings=max_matings, rng_seed=None)
