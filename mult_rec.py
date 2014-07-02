@@ -1087,14 +1087,15 @@ def animal_summary(animals):
 # the number of copies of each "a" allele in the current population of live
 # animals.
 #
-# cows          : A list of live cow records
-# bulls         : A list of live bull records
-# generation    : The current generation in the simulation
-# recessives    : A Python list of recessives in the population
-# freq_hist     : A dictionary of minor allele frequencies for each generation
+# cows              : A list of live cow records
+# bulls             : A list of live bull records
+# generation        : The current generation in the simulation
+# recessives        : A Python list of recessives in the population
+# freq_hist         : A dictionary of minor allele frequencies for each generation
+# show_recessives   : When True, print summary information for each recessive.
 
 
-def update_maf(cows, bulls, generation, recessives, freq_hist):
+def update_maf(cows, bulls, generation, recessives, freq_hist, show_recessives=False):
     minor_allele_counts = []
     for r in recessives:
         minor_allele_counts.append(0)
@@ -1130,28 +1131,30 @@ def update_maf(cows, bulls, generation, recessives, freq_hist):
             denom = (1. - r_freq)**2 + (2 * r_freq * (1. - r_freq))
             f_dom = (1. - r_freq)**2 / denom
             f_het = (2 * r_freq * (1. - r_freq)) / denom
-            print
-            print '\tRecessive %s (%s), generation %s:' % (r, recessives[r][3], generation)
-            print '\t\tminor alleles = %s\t\ttotal alleles = %s' % (minor_allele_counts[r], total_alleles)
-            print '\t\tp = %s\t\tq = %s' % ((1. - r_freq), r_freq)
-            print '\t\t  = %s\t\t  = %s' % ((1. - r_freq) - (1. - recessives[r-1][0]),
-                                            r_freq - recessives[r-1][0])
-            print '\t\tf(AA) = %s\t\tf(Aa) = %s' % (f_dom, f_het)
+            if show_recessives:
+                print
+                print '\tRecessive %s (%s), generation %s:' % (r, recessives[r][3], generation)
+                print '\t\tminor alleles = %s\t\ttotal alleles = %s' % (minor_allele_counts[r], total_alleles)
+                print '\t\tp = %s\t\tq = %s' % ((1. - r_freq), r_freq)
+                print '\t\t  = %s\t\t  = %s' % ((1. - r_freq) - (1. - recessives[r-1][0]),
+                                                r_freq - recessives[r-1][0])
+                print '\t\tf(AA) = %s\t\tf(Aa) = %s' % (f_dom, f_het)
         # Well, okay, so it's not.
         else:
             # Compute the frequency of the AA and Aa genotypes
             f_dom = (1. - r_freq)**2
             f_het = (2 * r_freq * (1. - r_freq))
             f_rec = r_freq**2
-            print
-            print '\tThis recessive is ***NOT LETHAL***'
-            print '\tRecessive %s (%s), generation %s:' % (r, recessives[r][3], generation)
-            print '\t\tminor alleles = %s\t\ttotal alleles = %s' % (minor_allele_counts[r], total_alleles)
-            print '\t\tp = %s\t\tq = %s' % ((1. - r_freq), r_freq)
-            print '\t\t  = %s\t\t  = %s' % ((1. - r_freq) - (1. - recessives[r-1][0]),
-                                            r_freq - recessives[r-1][0])
-            print '\t\tf(AA) = %s\t\tf(Aa) = %s' % (f_dom, f_het)
-            print '\t\tf(aa) = %s' % f_rec
+            if show_recessives:
+                print
+                print '\tThis recessive is ***NOT LETHAL***'
+                print '\tRecessive %s (%s), generation %s:' % (r, recessives[r][3], generation)
+                print '\t\tminor alleles = %s\t\ttotal alleles = %s' % (minor_allele_counts[r], total_alleles)
+                print '\t\tp = %s\t\tq = %s' % ((1. - r_freq), r_freq)
+                print '\t\t  = %s\t\t  = %s' % ((1. - r_freq) - (1. - recessives[r-1][0]),
+                                                r_freq - recessives[r-1][0])
+                print '\t\tf(AA) = %s\t\tf(Aa) = %s' % (f_dom, f_het)
+                print '\t\tf(aa) = %s' % f_rec
         # Finally, update the recessives and history tables
         recessives[r][0] = r_freq
         freq_hist[generation].append(r_freq)
@@ -1236,12 +1239,13 @@ def write_history_files(cows, bulls, dead_cows, dead_bulls, generation, filetag=
 # filetag           : String added to a filename to better describe what analysis
 #                     a file is associated with
 # recessives        : A Python list of recessives in the population
-# max_matings   : The maximum number of matings permitted for each bull
+# max_matings       : The maximum number of matings permitted for each bull
+# show_recessives   : When True, print summary information for each recessive.
 
 
 def run_scenario(scenario='random', gens=20, percent=0.10, base_bulls=500, base_cows=2500,
                  base_herds=100, max_bulls=1500, max_cows=7500, debug=False, filetag='',
-                 recessives=[], max_matings=500, rng_seed=None):
+                 recessives=[], max_matings=500, rng_seed=None, show_recessives=False):
 
     # This is the initial setup
     print '[run_scenario]: Setting-up the simulation at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -1360,7 +1364,7 @@ def run_scenario(scenario='random', gens=20, percent=0.10, base_bulls=500, base_
 
         # Now update the MAF for the recessives in the population
         print '\n[run_scenario]: Updating minor allele frequencies at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-        recessives, freq_hist = update_maf(cows, bulls, generation, recessives, freq_hist)
+        recessives, freq_hist = update_maf(cows, bulls, generation, recessives, freq_hist, show_recessives)
 
         # Write history files
         print '\n[run_scenario]: Writing history files at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
