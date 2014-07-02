@@ -1435,14 +1435,14 @@ def run_scenario(scenario='random', gens=20, percent=0.10, base_bulls=500, base_
 if __name__ == '__main__':
 
     # Simulation parameters
-    base_bulls = 50         # Initial number of founder bulls in the population
-    base_cows = 5000        # Initial number of founder cows in the population
-    base_herds = 50         # Number of herds in the population
+    base_bulls = 100        # Initial number of founder bulls in the population
+    base_cows = 20000       # Initial number of founder cows in the population
+    base_herds = 200        # Number of herds in the population
     max_bulls = 500         # Maximum number of live bulls to keep each generation
-    max_cows = 50000        # Maximum number of live cows to keep each generation
+    max_cows = 100000       # Maximum number of live cows to keep each generation
     percent = 0.10          # Proportion of bulls to use in the toppct scenario
     generations = 20        # How long to run the simulation
-    max_matings = 150       # The maximum number of matings permitted for each bull
+    max_matings = 5000      # The maximum number of matings permitted for each bull (5% of cows)
     debug = False           # Activate (True) or deactivate (False) debugging messages
 
     # Recessives are stored in a list of lists. The first value in each list
