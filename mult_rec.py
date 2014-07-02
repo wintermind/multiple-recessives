@@ -1411,9 +1411,9 @@ def run_scenario(scenario='random', gens=20, percent=0.10, base_bulls=500, base_
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
     ax.set_ylim(0.0, 1.0)
-    ax.set_title("MAF change over time (%s)" % scenario)
+    ax.set_title("Allele frequency change over time (%s)" % scenario)
     ax.set_xlabel("Generation")
-    ax.set_ylabel("Minor allele frequency")
+    ax.set_ylabel("Allele frequency")
     x = freq_hist.keys()
     colors = itertools.cycle(['r', 'g', 'b', 'c', 'y', 'm', 'k'])
     markers = itertools.cycle(['o', 's', 'v'])
@@ -1423,7 +1423,7 @@ def run_scenario(scenario='random', gens=20, percent=0.10, base_bulls=500, base_
             y.append(v[r])
         ax.plot(x, y, color=colors.next(), marker=markers.next(), label=recessives[r][3])
     ax.legend(loc='best')
-    filename = "MAF_plot_%s_gen_%s_rec_%s.png" % (gens, len(recessives), scenario)
+    filename = "allele_frequency_plot%s.png" % filetag
     plt.savefig(filename, bbox_inches="tight")
     plt.clf()
 
@@ -1467,7 +1467,7 @@ if __name__ == '__main__':
     print '=' * 80
     recessives = copy.deepcopy(default_recessives)
     run_scenario(scenario='random', base_bulls=base_bulls, base_cows=base_cows,
-        max_bulls=max_bulls, max_cows=max_cows, filetag='_ran_20_gen_12_rec',
+        max_bulls=max_bulls, max_cows=max_cows, filetag='_ran_default',
         recessives=recessives, rng_seed=None)
 
     # Now run truncation selection, just to introduce some genetic trend.
@@ -1475,7 +1475,7 @@ if __name__ == '__main__':
     recessives = copy.deepcopy(default_recessives)
     run_scenario(scenario='toppct', percent=percent, base_bulls=base_bulls,
         base_cows=base_cows, max_bulls=max_bulls, max_cows=max_cows,
-        filetag='_toppct_20_gen_12_rec', recessives=recessives,
+        filetag='_toppct_default', recessives=recessives,
         rng_seed=None)
 
     # This is the real heart of the analysis, applying Pryce's method, which accounts for
@@ -1484,7 +1484,7 @@ if __name__ == '__main__':
     recessives = copy.deepcopy(default_recessives)
     run_scenario(scenario='pryce', percent=percent, base_bulls=base_bulls, base_cows=base_cows,
                  base_herds=base_herds, max_bulls=max_bulls, max_cows=max_cows, debug=debug,
-                 filetag='_pryce_20_gen_12_rec', recessives=recessives, gens=generations,
+                 filetag='_pryce_default', recessives=recessives, gens=generations,
                  max_matings=max_matings, rng_seed=None)
 
     # The 'pryce_r' scenario applies Pryce's method, which accounts for inbreeding
@@ -1493,5 +1493,5 @@ if __name__ == '__main__':
     recessives = copy.deepcopy(default_recessives)
     run_scenario(scenario='pryce_r', percent=percent, base_bulls=base_bulls, base_cows=base_cows,
                  base_herds=base_herds, max_bulls=max_bulls, max_cows=max_cows, debug=debug,
-                 filetag='_pryce_r_20_gen_12_rec', recessives=recessives, gens=generations,
+                 filetag='_pryce_r_default', recessives=recessives, gens=generations,
                  max_matings=max_matings, rng_seed=None)
