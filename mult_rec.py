@@ -1435,8 +1435,8 @@ def run_scenario(scenario='random', gens=20, percent=0.10, base_bulls=500, base_
 if __name__ == '__main__':
 
     # Simulation parameters
-    base_bulls = 100        # Initial number of founder bulls in the population
-    base_cows = 20000       # Initial number of founder cows in the population
+    base_bulls = 500        # Initial number of founder bulls in the population
+    base_cows = 100000      # Initial number of founder cows in the population
     base_herds = 200        # Number of herds in the population
     max_bulls = 500         # Maximum number of live bulls to keep each generation
     max_cows = 100000       # Maximum number of live cows to keep each generation

@@ -1,0 +1,34 @@
+scenario    :	toppct
+percent     :	0.1
+base bulls  :	350
+base cows   :	35000
+base herds  :	100
+max bulls   :	500
+max cows    :	100000
+Base MAF 1 :	0.029223880597
+Cost 1     :	150
+Base MAF 2 :	0.00197512437811
+Cost 2     :	40
+Base MAF 3 :	0.0162786069652
+Cost 3     :	40
+Base MAF 4 :	0.0347611940299
+Cost 4     :	40
+Base MAF 5 :	0.00092039800995
+Cost 5     :	40
+Base MAF 6 :	0.000915422885572
+Cost 6     :	40
+Base MAF 7 :	0.00313930348259
+Cost 7     :	150
+Base MAF 8 :	0.0138756218905
+Cost 8     :	70
+Base MAF 9 :	2.48756218905e-05
+Cost 9     :	40
+Base MAF 10 :	0.00813930348259
+Cost 10     :	150
+Base MAF 11 :	0.000199004975124
+Cost 11     :	-20
+Base MAF 12 :	0.00294527363184
+Cost 12     :	20
+Debug       :	False
+Filetag     :	_toppct_holstein
+RNG seed    :	None

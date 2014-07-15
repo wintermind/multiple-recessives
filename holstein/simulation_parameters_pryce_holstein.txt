@@ -1,0 +1,34 @@
+scenario    :	pryce
+percent     :	0.1
+base bulls  :	350
+base cows   :	35000
+base herds  :	200
+max bulls   :	500
+max cows    :	100000
+Base MAF 1 :	0.00208955223881
+Cost 1     :	150
+Base MAF 2 :	0.00107462686567
+Cost 2     :	40
+Base MAF 3 :	0.00683084577114
+Cost 3     :	40
+Base MAF 4 :	0.00354228855721
+Cost 4     :	40
+Base MAF 5 :	3.98009950249e-05
+Cost 5     :	40
+Base MAF 6 :	0.0334278606965
+Cost 6     :	40
+Base MAF 7 :	1.99004975124e-05
+Cost 7     :	150
+Base MAF 8 :	0.00018407960199
+Cost 8     :	70
+Base MAF 9 :	0.0
+Cost 9     :	40
+Base MAF 10 :	3.98009950249e-05
+Cost 10     :	150
+Base MAF 11 :	6.46766169154e-05
+Cost 11     :	-20
+Base MAF 12 :	0.0117562189055
+Cost 12     :	20
+Debug       :	False
+Filetag     :	_pryce_holstein
+RNG seed    :	None

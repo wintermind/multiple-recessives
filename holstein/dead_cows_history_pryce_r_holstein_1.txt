@@ -1,0 +1,1 @@
+animal	sire	dam	born	sex	herd	status	cause	died	TBV	recessives
