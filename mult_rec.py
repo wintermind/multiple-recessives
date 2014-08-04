@@ -577,7 +577,10 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
         print '\t\t[pryce_mating]: %s total animals in pedigree in generation %s at %s' % \
             (pedigree_counter, generation, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
     # Write the pedigree to a file.
-    pedfile = 'pedigree_%s.txt' % generation
+    if penalty:
+        pedfile = 'pedigree_pryce_%s.txt' % generation
+    else:
+        pedfile = 'pedigree_pryce_r_%s.txt' % generation
     if debug:
         print '\t[pryce_mating]: Writing pedigree to %s at %s' % \
               (pedfile, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
@@ -603,7 +606,10 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
     # Stack Overflow (http://stackoverflow.com/questions/12057794/
     # python-using-popen-poll-on-background-process). I'm not 100% sure that this works
     # as intended, but I'm out of ideas.
-    logfile = 'pedigree_%s.log' % generation
+    if penalty:
+        logfile = 'pedigree_pryce_%s.log' % generation
+    else:
+        logfile = 'pedigree_pryce_r_%s.log' % generation
     #Several methods can be used:
     # 1 - recursive as in Aguilar & Misztal, 2008 (default)
     # 2 - recursive but with coefficients store in memory, faster with large number of
@@ -634,7 +640,10 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
         print '\t[pryce_mating]: Finished inbupgf90 to calculate COI at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
 
     # Load the COI into a dictionary keyed by original animal ID
-    coifile = 'pedigree_%s.txt.solinb' % generation
+    if penalty:
+        coifile = 'pedigree_pryce_%s.txt.solinb' % generation
+    else:
+        coifile = 'pedigree_pryce_r_%s.txt.solinb' % generation
     if debug:
         print '\t[pryce_mating]: Putting coefficients of inbreeding from %s.solinb in a dictionary at %s' \
             % (pedfile, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
