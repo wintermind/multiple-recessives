@@ -815,7 +815,7 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
     ifh = open(coifile, 'r')
     for line in ifh:
         pieces = line.split()
-        inbr[pieces[0]] = float(pieces[1])
+        inbr[int(pieces[0])] = float(pieces[1])
     ifh.close()
 
     # Now, assign the coefficients of inbreeding to the "old" animal records
@@ -824,11 +824,12 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
     for b in bulls: b[10] = inbr[b[0]]
     for db in dead_bulls: db[10] = inbr[db[0]]
 
+    # We want to save F_ij and \sum{P(aa)} for individual matings for later analysis.
+    if penalty:
+        fpdict = {}
+
     # Setup the B_0 matrix, which will contain PA BV plus an inbreeding penalty
-    flambda = 12.           # Loss of NM$ per 1% increase in inbreeding
-                            # Smith L.A., Cassell B., Pearson R.E. (1998) The effects of
-                            # inbreeding on the lifetime performance of dairy cattle.
-                            # J. Dairy Sci., 81, 2729--2737.
+    flambda = 25.           # Loss of NM$ per 1% increase in inbreeding
     #b_mat = np.zeros((len(bulls), len(cows)))
     #f_mat = np.zeros((len(bulls), len(cows)))
     b_mat = ma.zeros((len(bulls), len(cows)))
@@ -839,50 +840,63 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
     cids = [c[0] for c in cows]
     for b in bulls:
         bidx = bids.index(b[0])
-    for c in cows:
-        cidx = cids.index(c[0])
-        calf_id = str(b[0])+'00'+str(c[0])
-        # If there is a hit on this key, then it means that the bull was
-        # used in the herd in which the cow lives.
-        try:
-            # Update the matrix of inbreeding coefficients.
-            f_mat[bidx, cidx] = inbr[calf_id]
-            # Now, we need to adjust the parent averages to account for
-            # inbreeding effects, and the economic impacts of the recessives.
-            b_mat[bidx, cidx] = (0.5 * (b[9] + c[9])) - \
-                (inbr[calf_id] * 100 * flambda)
-            # If the penalty flag is set (True) then adjust the PA of the mating to account
-            # for the effects of recessives on the offspring. If this flag is not set then
-            # results should be similar to those of Pryce et al. (2012).
-            if penalty:
-                for r in xrange(len(recessives)):
-                    # What are the parent genotypes?
-                    b_gt = b[-1][r]
-                    c_gt = c[-1][r]
-                    if b_gt == -1 and c_gt == -1:           # aa genotypes
-                        # The calf will definitely be affected, so we adjust
-                        # the parent average by the full "value" of an aa
-                        # calf.
-                        b_mat[bidx, cidx] -= recessives[r][1]
-                    elif b_gt == 1 and c_gt == 1:           # AA genotypes
-                        # The calf cannot be aa, so there is no adjustment to
-                        # the parent average.
-                        pass
-                    else:
-                        # There is a 1/4 chance of having an affected calf,
-                        # so the PA is adjusted by 1/4 of the "value" of an
-                        # aa calf.
-                        b_mat[bidx, cidx] -= (0.25 * recessives[r][1])
-        # If there is not matching key in the dictionary, then that
-        # cow-bull combination was not evaluated, which means the bull
-        # was not used in the same herd as the cow. We're setting those
-        # cells to "NA" instead of a proxy value, e.g., -999, since
-        # NumPy functions and methods are supposed to understand them.
-        except KeyError:
-            #b_mat[bidx, cidx] = NA
-            b_mat[bidx, cidx] = ma.masked
-            #f_mat[bidx, cidx] = NA
-            f_mat[bidx, cidx] = ma.masked
+        for c in cows:
+            cidx = cids.index(c[0])
+            calf_id = str(b[0])+'00'+str(c[0])
+            # Set accumulator to sum P(aa) to 0.
+            if penalty: paa_sum = 0.
+            # If there is a hit on this key, then it means that the bull was
+            # used in the herd in which the cow lives.
+            try:
+                # Update the matrix of inbreeding coefficients.
+                f_mat[bidx, cidx] = inbr[calf_id]
+                # Now, we need to adjust the parent averages to account for
+                # inbreeding effects, and the economic impacts of the recessives.
+                b_mat[bidx, cidx] = (0.5 * (b[9] + c[9])) - \
+                    (inbr[calf_id] * 100 * flambda)
+                # If the penalty flag is set (True) then adjust the PA of the mating to account
+                # for the effects of recessives on the offspring. If this flag is not set then
+                # results should be similar to those of Pryce et al. (2012).
+                if penalty:
+                    for r in xrange(len(recessives)):
+                        # What are the parent genotypes?
+                        b_gt = b[-1][r]
+                        c_gt = c[-1][r]
+                        if b_gt == -1 and c_gt == -1:           # aa genotypes
+                            # The calf will definitely be affected, so we adjust
+                            # the parent average by the full "value" of an aa
+                            # calf.
+                            b_mat[bidx, cidx] -= recessives[r][1]
+                            paa_sum += 1.
+                        elif b_gt == 1 and c_gt == 1:           # AA genotypes
+                            # The calf cannot be aa, so there is no adjustment to
+                            # the parent average.
+                            pass
+                        else:
+                            # There is a 1/4 chance of having an affected calf,
+                            # so the PA is adjusted by 1/4 of the "value" of an
+                            # aa calf.
+                            b_mat[bidx, cidx] -= (0.25 * recessives[r][1])
+                            paa_sum = 0.25
+                    # Store the inbreeding/P(aa) info for later. We're saving only calves because they're the animals
+                    # for which we sum the P(aa) to make mating decisions.
+                    fpdict[calf_id] = {}
+                    fpdict[calf_id]['sire'] = str(b[0])
+                    fpdict[calf_id]['dam'] = str(c[0])
+                    fpdict[calf_id]['gen'] = generation
+                    fpdict[calf_id]['inbr'] = inbr[calf_id]
+                    fpdict[calf_id]['paa'] = paa_sum
+                    fpdict[calf_id]['mating'] = 0
+            # If there is not matching key in the dictionary, then that
+            # cow-bull combination was not evaluated, which means the bull
+            # was not used in the same herd as the cow. We're setting those
+            # cells to "NA" instead of a proxy value, e.g., -999, since
+            # NumPy functions and methods are supposed to understand them.
+            except KeyError:
+                #b_mat[bidx, cidx] = NA
+                b_mat[bidx, cidx] = ma.masked
+                #f_mat[bidx, cidx] = NA
+                f_mat[bidx, cidx] = ma.masked
 
     # Now we're going to actually allocate mate pairs
     #m_mat = np.zeros((len(bulls), len(cows)))
@@ -944,6 +958,10 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
                     # Create the resulting calf
                     calf = create_new_calf(bulls[sorted_bulls[bidx]], c, recessives, next_id, generation, debug=debug)
                     # if debug: print calf
+                    # Update the mating flag in the F_ij / \sum{P(aa)} list
+                    calf_id = str(bulls[sorted_bulls[bidx]][0])+'00'+str(c[0])
+                    fpdict[calf_id]['mating'] = 1
+                    # Append new calf to lists
                     if calf[4] == 'F':
                         new_cows.append(calf)
                     else:
@@ -951,6 +969,18 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
                     next_id += 1
                     # ...and, we're done.
                     break
+
+    # Write the F_ij / \sum{P(aa)} information that we've been accumulating to a file for later analysis.
+    if penalty:
+        fpfile = 'fij_paa_pryce_%s.txt' % generation
+        fph = open(fpfile, 'w')
+        for fpkey in fpdict.keys():
+            fpline = '%s %s %s %s %s %s %s\n' % ( fpkey, fpdict[calf_id]['sire'], fpdict[calf_id]['dam'],
+                                                  fpdict[calf_id]['gen'], fpdict[calf_id]['inbr'],
+                                                  fpdict[calf_id]['paa'], fpdict[calf_id]['mating']
+                                                  )
+            fph.write(fpline)
+        fph.close()
 
     if debug:
         print '\t[pryce_mating]: Finished assigning mates and updating M_0 at %s' % \
