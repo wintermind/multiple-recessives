@@ -845,10 +845,16 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
     if debug:
         print '\t[pryce_mating]: Starting loop over herds to identify optimal matings at %s' % \
               datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    tenth = len(bull_portfolio.keys()) / 10
+    herd_counter = 0
     # For each herd we're going to loop over all possible matings of the cows in the herd to the randomly chosen
     # bull portfolio and compute a parent average. Then we'll select the actual matings. This will be on a within-
     # herd basis, so a new B and M will be computed for each herd.
     for h in bull_portfolio.keys():
+        herd_counter += 1
+        if herd_counter % tenth == 0 and debug:
+            print '\t\t[pryce_mating]: Processing herd %s of %s at %s' % \
+              (herd_counter, len(bull_portfolio.keys()), datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
         # We need these lists so that we can step into the correct locations in the relationship matrix to get the
         # relationship of each cow to each bull.
         bids = [str(b[0]) for b in bull_portfolio[h]]
@@ -1632,9 +1638,9 @@ def run_scenario(scenario='random', gens=20, percent=0.10, base_bulls=500, base_
 if __name__ == '__main__':
 
     # Simulation parameters
-    base_bulls = 500        # Initial number of founder bulls in the population
+    base_bulls = 350        # Initial number of founder bulls in the population
 #    base_bulls = 50
-    base_cows = 100000      # Initial number of founder cows in the population
+    base_cows = 35000      # Initial number of founder cows in the population
 #    base_cows = 10000
     base_herds = 200        # Number of herds in the population
 #    base_herds = 20
@@ -1670,32 +1676,33 @@ if __name__ == '__main__':
 #
 #     ]
 
-    with open('recessives.config','r') as inf:
+    # Alternatively, you can read the structure from a file so that it's easier to use
+    # mult_rec.py when you're comparig several difference scenarios.
+    with open('../recessives.config','r') as inf:
         default_recessives = ast.literal_eval(inf.read())
 
-    # # First, run the random mating scenario
-    # print '=' * 80
-    # recessives = copy.deepcopy(default_recessives)
-    # run_scenario(scenario='random', base_bulls=base_bulls, base_cows=base_cows,
-    #              max_bulls=max_bulls, max_cows=max_cows, filetag='_ran_default',
-    #              recessives=recessives, rng_seed=None)
-    #
-    # # Now run truncation selection, just to introduce some genetic trend.
-    # print '=' * 80
-    # recessives = copy.deepcopy(default_recessives)
-    # run_scenario(scenario='toppct', percent=percent, base_bulls=base_bulls,
-    #              base_cows=base_cows, max_bulls=max_bulls, max_cows=max_cows,
-    #              filetag='_toppct_default', recessives=recessives,
-    #              rng_seed=None)
-    #
-    # # This is the real heart of the analysis, applying Pryce's method, which accounts for
-    # # inbreeding but NOT for recessives.
-    # print '=' * 80
-    # recessives = copy.deepcopy(default_recessives)
-    # run_scenario(scenario='pryce', percent=percent, base_bulls=base_bulls, base_cows=base_cows,
-    #              base_herds=base_herds, max_bulls=max_bulls, max_cows=max_cows, debug=debug,
-    #              filetag='_pryce_default', recessives=recessives, gens=generations,
-    #              max_matings=max_matings, rng_seed=None)
+    # First, run the random mating scenario
+    print '=' * 80
+    recessives = copy.deepcopy(default_recessives)
+    run_scenario(scenario='random', base_bulls=base_bulls, base_cows=base_cows,
+                 max_bulls=max_bulls, max_cows=max_cows, filetag='_ran_default',
+                 recessives=recessives, rng_seed=None)
+    # Now run truncation selection, just to introduce some genetic trend.
+    print '=' * 80
+    recessives = copy.deepcopy(default_recessives)
+    run_scenario(scenario='toppct', percent=percent, base_bulls=base_bulls,
+                 base_cows=base_cows, max_bulls=max_bulls, max_cows=max_cows,
+                 filetag='_toppct_default', recessives=recessives,
+                 rng_seed=None)
+
+    # This is the real heart of the analysis, applying Pryce's method, which accounts for
+    # inbreeding but NOT for recessives.
+    print '=' * 80
+    recessives = copy.deepcopy(default_recessives)
+    run_scenario(scenario='pryce', percent=percent, base_bulls=base_bulls, base_cows=base_cows,
+                 base_herds=base_herds, max_bulls=max_bulls, max_cows=max_cows, debug=debug,
+                 filetag='_pryce_default', recessives=recessives, gens=generations,
+                 max_matings=max_matings, rng_seed=None)
 
     # The 'pryce_r' scenario applies Pryce's method, which accounts for inbreeding
     # and also for recessive effects.
