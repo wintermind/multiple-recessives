@@ -946,7 +946,8 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
                         calf = create_new_calf(bull_portfolio[h][sorted_bulls[bidx]], c, recessives, next_id,
                                                generation, debug=debug)
                         calf_id = str(bull_portfolio[h][sorted_bulls[bidx]][0])+'__'+str(c[0])
-                        fpdict[calf_id]['mating'] = 1
+                        if penalty:
+                            fpdict[calf_id]['mating'] = 1
                         if calf[4] == 'F': new_cows.append(calf)
                         else: new_bulls.append(calf)
                         next_id += 1
