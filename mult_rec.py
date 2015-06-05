@@ -724,16 +724,16 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
         print '\t[pryce_mating]: Mating all cows to all herd bulls at %s' % \
               datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     for herd in xrange(base_herds):
-        # if debug:
-        #     print '\t\t[pryce_mating]: Mating cows herd %s at %s' % (herd,
-        #                                                              datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
-        #     print '\t\t[pryce_mating]: Pedigree counter = %s' % pedigree_counter
         bull_portfolio[herd] = []
         cow_portfolio[herd] = []
-        random.shuffle(bulls)                   # Randomly order the live bulls.
-        herd_bulls = bulls[0:service_bulls+1]   # The first service_bulls males selected at random will be used in
-                                                # this herd for matings this generation.
+        # Sample 20% of the active bulls at random, then sort them on TBV and take the top "service_sires" bulls
+        # for use in the herd.
+        random.shuffle(bulls)                               # Randomly order bulls
+        herd_bulls = bulls[0:int(len(bulls)/5)+1]           # Select 20% at random
+        herd_bulls.sort(key=lambda x: x[9], reverse=True)   # Sort in descending order on TBV
+        herd_bulls = herd_bulls[0:service_bulls+1]          # Keep the top "service_bulls" sires for use
         herd_cows = [c for c in cows if c[5] == herd]
+        # Now create proxy calves for each cow-bull combination.
         for b in herd_bulls:
             bull_portfolio[herd].append(b)
             for c in herd_cows:
