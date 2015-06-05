@@ -58,10 +58,7 @@ def setup(base_bulls=500, base_cows=2500, base_herds=100, force_carriers=True, f
 
     # Seed the RNG
     if rng_seed:
-        try:
-            np.random.seed(int(rng_seed))
-        except:
-            np.random.seed()
+        np.random.seed(rng_seed)
     else:
         np.random.seed()
 
@@ -204,7 +201,7 @@ def setup(base_bulls=500, base_cows=2500, base_herds=100, force_carriers=True, f
         if c in id_list:
             if debug:
                 print '[setup]: Error! A cow with ID %s already exists in the ID list!' % c
-        c_list = [c, 0, 0, (-1*random.randint(0, 4)), 'F', random.randint(0, base_herds), 'A',
+        c_list = [c, 0, 0, (-1*random.randint(0, 4)), 'F', random.randint(0, base_herds-1), 'A',
                   '', -1, base_cow_tbv.item(i), 0.0, []]
         for r in xrange(len(recessives)):
             c_list[-1].append(base_cow_gt.item(i, r))
@@ -219,7 +216,7 @@ def setup(base_bulls=500, base_cows=2500, base_herds=100, force_carriers=True, f
         if b in id_list:
             if debug:
                 print '[setup]: Error! A bull with ID %s already exists in the ID list!' % b
-        b_list = [b, 0, 0, (-1*random.randint(0, 9)), 'M', random.randint(0, base_herds), 'A', '',
+        b_list = [b, 0, 0, (-1*random.randint(0, 9)), 'M', random.randint(0, base_herds-1), 'A', '',
                   -1, base_bull_tbv.item(i), 0.0, []]
         for r in xrange(len(recessives)):
             b_list[-1].append(base_bull_gt.item(i, r))
@@ -628,6 +625,7 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
                                                                                               service_bulls, penalty)
         for r in recessives:
             print '\t\t\t%s' % r
+        print
     # Never trust users, they are lying liars
     if max_matings < 0:
         print '\t[pryce_mating]: %s is less than 0, changing num_matings to 500.' % max_matings
@@ -660,7 +658,7 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
     # Note that I'm including a fudge factor by multiplying the bulls by 2 so that we get an
     # array longer than we need.
     #pedigree_size += int((2*len(bulls)) * len(cows)) / base_herds
-    pedigree_size += ( 2* len(cows) * service_bulls ) # Leave room for new calves
+    pedigree_size += (2 * len(cows) * service_bulls) # Leave room for new calves
     try:
         pedigree = np.zeros((pedigree_size,), dtype=('a20, a20, a20, i4'))
         print '\t[pryce_mating]: Allocated a NumPy array of size %s to store pedigree at %s' % \
@@ -679,24 +677,24 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
         if pedigree_array:
             pedigree[pedigree_counter] = (c[0], c[1], c[2], c[3]+10)
         else:
-            pedigree.append(' '.join([c[0], c[1], c[2], c[3]+10, '\n']))
             if c[0] not in id_list:
+                pedigree.append(' '.join([c[0], c[1], c[2], c[3]+10, '\n']))
                 id_list.append(c[0])
         pedigree_counter += 1
     for dc in dead_cows:
         if pedigree_array:
             pedigree[pedigree_counter] = (dc[0], dc[1], dc[2], dc[3]+10)
         else:
-            pedigree.append(' '.join([dc[0], dc[1], dc[2], dc[3]+10, '\n']))
             if dc[0] not in id_list:
+                pedigree.append(' '.join([dc[0], dc[1], dc[2], dc[3]+10, '\n']))
                 id_list.append(dc[0])
         pedigree_counter += 1
     for b in bulls:
         if pedigree_array:
             pedigree[pedigree_counter] = (b[0], b[1], b[2], b[3]+10)
         else:
-            pedigree.append(' '.join([b[0], b[1], b[2], b[3]+10, '\n']))
             if b[0] not in id_list:
+                pedigree.append(' '.join([b[0], b[1], b[2], b[3]+10, '\n']))
                 id_list.append(b[0])
         pedigree_counter += 1
         matings[b[0]] = 0
@@ -704,8 +702,8 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
         if isinstance(pedigree, (np.ndarray, np.generic)):
             pedigree[pedigree_counter] = (db[0], db[1], db[2], db[3]+10)
         else:
-            pedigree.append(' '.join([db[0], db[1], db[2], db[3]+10, '\n']))
             if db[0] not in id_list:
+                pedigree.append(' '.join([db[0], db[1], db[2], db[3]+10, '\n']))
                 id_list.append(db[0])
         pedigree_counter += 1
     if pedigree_array:
@@ -729,15 +727,21 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
         # Sample 20% of the active bulls at random, then sort them on TBV and take the top "service_sires" bulls
         # for use in the herd.
         random.shuffle(bulls)                               # Randomly order bulls
-        herd_bulls = bulls[0:int(len(bulls)/5)+1]           # Select 20% at random
+        # In some scenarios, there are only a few. When that happens, 20% can be less than service bulls, so we're
+        # going to use service_bulls as a floor.
+        if int(len(bulls)/5)+1 < service_bulls:
+            herd_bulls = bulls[0:service_bulls]           # Select service_bulls at random
+        else:
+            herd_bulls = bulls[0:int(len(bulls)/5)]       # Select 20% at random
         herd_bulls.sort(key=lambda x: x[9], reverse=True)   # Sort in descending order on TBV
-        herd_bulls = herd_bulls[0:service_bulls+1]          # Keep the top "service_bulls" sires for use
+        herd_bulls = herd_bulls[0:service_bulls]          # Keep the top "service_bulls" sires for use
         herd_cows = [c for c in cows if c[5] == herd]
         # Now create proxy calves for each cow-bull combination.
         for b in herd_bulls:
             bull_portfolio[herd].append(b)
             for c in herd_cows:
-                cow_portfolio[herd].append(c)
+                if c not in cow_portfolio[herd]:
+                    cow_portfolio[herd].append(c)
                 calf_id = str(b[0])+'__'+str(c[0])
                 if calf_id in id_list:
                     if debug:
@@ -749,6 +753,7 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
                     pedigree.append(' '.join([calf_id, b[0], c[0], generation+10, '\n']))
                 pedigree_counter += 1
                 calfcount += 1
+
     if debug:
         print '\t\t[pryce_mating]: %s calves added to pedigree in generation %s at %s' % \
             (calfcount, generation, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
@@ -816,8 +821,8 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
         if errors == '':
             print '\t\t[pryce_mating]: INBUPGF90 finished without problems at %s!' % \
                 datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-            #if debug:
-            #    print '\t\t\t%s' % results
+            if debug:
+                print '\t\t\t%s' % results
         else:
             print '\t\t[pryce_mating]: errors: %s' % errors
         print '\t[pryce_mating]: Finished inbupgf90 to calculate COI at %s' %\
@@ -842,6 +847,8 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
     if debug:
         print '\t[pryce_mating]: Writing coefficients of inbreeding to animal records at %s' \
             % (datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
+    # I *think* that animals with no offspring are getting dropped from the pedigree when inbupgf90 is doing its
+    # thing
     for c in cows: c[10] = inbr[str(c[0])]
     for dc in dead_cows: dc[10] = inbr[str(dc[0])]
     for b in bulls: b[10] = inbr[str(b[0])]
@@ -860,6 +867,7 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
         print '\t[pryce_mating]: Starting loop over herds to identify optimal matings at %s' % \
               datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     tenth = len(bull_portfolio.keys()) / 10
+    if tenth <= 0: tenth = 1
     herd_counter = 0
     # For each herd we're going to loop over all possible matings of the cows in the herd to the randomly chosen
     # bull portfolio and compute a parent average. Then we'll select the actual matings. This will be on a within-
@@ -882,52 +890,48 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
         # Now process the herd the first time, to compute PA.
         for b in bull_portfolio[h]:
             bidx = bids.index(str(b[0]))
+            # print 'Bull idx: ', bidx, ' (', str(b[0]), ')'
             for c in cow_portfolio[h]:
                 cidx = cids.index(str(c[0]))
+                # print '\tCow idx : ', bidx, ' (', str(c[0]), ')'
                 calf_id = str(b[0])+'__'+str(c[0])
                 # Set accumulator of \sum P(aa) to 0.
                 if penalty:
                     paa_sum = 0.
-                # If there is a hit on this key the bull was used in the herd in which the cow lives.
-                try:
-                    # Update the matrix of inbreeding coefficients.
-                    f_mat[bidx, cidx] = inbr[calf_id]
-                    # Now adjust the PA to account for inbreeding and the economic impacts of the recessives.
-                    b_mat[bidx, cidx] = (0.5 * (b[9] + c[9])) - (inbr[calf_id] * 100 * flambda)
-                    # Adjust the PA of the mating to account for recessives on. If the flag is not set then
-                    # results should be similar to those of Pryce et al. (2012).
-                    if penalty:
-                        for r in xrange(len(recessives)):
-                            # What are the parent genotypes?
-                            b_gt = b[-1][r]
-                            c_gt = c[-1][r]
-                            if b_gt == -1 and c_gt == -1:           # aa genotypes
-                                # Affected calf, adjust the PA by the full value of an aa calf.
-                                b_mat[bidx, cidx] -= recessives[r][1]
-                                paa_sum += 1.
-                            elif b_gt == 1 and c_gt == 1:           # AA genotypes
-                                # Calf cannot be aa, no adjustment to the PA.
-                                pass
-                            else:
-                                # There is a 1/4 chance of having an affected calf,
-                                # so the PA is adjusted by 1/4 of the "value" of an
-                                # aa calf.
-                                b_mat[bidx, cidx] -= (0.25 * recessives[r][1])
-                                paa_sum += 0.25
-                        # Store the inbreeding/P(aa) info for later. We're saving only calves because they're the animals
-                        # for which we sum the P(aa) to make mating decisions.
-                        fpdict[calf_id] = {}
-                        fpdict[calf_id]['sire'] = str(b[0])
-                        fpdict[calf_id]['dam'] = str(c[0])
-                        fpdict[calf_id]['gen'] = generation
-                        fpdict[calf_id]['inbr'] = inbr[calf_id]
-                        fpdict[calf_id]['paa'] = paa_sum
-                        fpdict[calf_id]['mating'] = 0
-                # If there is not a matching key in the dictionary, then that cow-bull combination was not evaluated,
-                # which means the bull was not used in the same herd as the cow.
-                except KeyError:
-                    b_mat[bidx, cidx] = ma.masked
-                    f_mat[bidx, cidx] = ma.masked
+                # Update the matrix of inbreeding coefficients.
+                f_mat[bidx, cidx] = inbr[calf_id]
+                # Now adjust the PA to account for inbreeding and the economic impacts of the recessives.
+                b_mat[bidx, cidx] = (0.5 * (b[9] + c[9])) - (inbr[calf_id] * 100 * flambda)
+                # Adjust the PA of the mating to account for recessives on. If the flag is not set then
+                # results should be similar to those of Pryce et al. (2012).
+                if penalty:
+                    for r in xrange(len(recessives)):
+                        # What are the parent genotypes?
+                        b_gt = b[-1][r]
+                        c_gt = c[-1][r]
+                        if b_gt == -1 and c_gt == -1:           # aa genotypes
+                            # Affected calf, adjust the PA by the full value of an aa calf.
+                            b_mat[bidx, cidx] -= recessives[r][1]
+                            paa_sum += 1.
+                        elif b_gt == 1 and c_gt == 1:           # AA genotypes
+                            # Calf cannot be aa, no adjustment to the PA.
+                            pass
+                        else:
+                            # There is a 1/4 chance of having an affected calf,
+                            # so the PA is adjusted by 1/4 of the "value" of an
+                            # aa calf.
+                            b_mat[bidx, cidx] -= (0.25 * recessives[r][1])
+                            paa_sum += 0.25
+                    # Store the inbreeding/P(aa) info for later. We're saving only calves because they're the animals
+                    # for which we sum the P(aa) to make mating decisions.
+                    fpdict[calf_id] = {}
+                    fpdict[calf_id]['sire'] = str(b[0])
+                    fpdict[calf_id]['dam'] = str(c[0])
+                    fpdict[calf_id]['gen'] = generation
+                    fpdict[calf_id]['inbr'] = inbr[calf_id]
+                    fpdict[calf_id]['paa'] = paa_sum
+                    fpdict[calf_id]['mating'] = 0
+
         #
         # From Pryce et al. (2012) (http://www.journalofdairyscience.org/article/S0022-0302(11)00709-0/fulltext#sec0030)
         # A matrix of selected mates (mate allocation matrix; M) was constructed, where Mij=1 if the corresponding
@@ -939,43 +943,47 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
         cow_id_list = [c[0] for c in cow_portfolio[h]]
         new_bulls = []
         new_cows = []
+        if len(cow_id_list) > ( service_bulls * max_matings ):
+            print '\t[pryce_mating]: WARNING! There are %s cows in herd %s, but %s service sires limited to %s matings ' \
+                'cannot breed that many cows! Only the first %s cows in the herd will be bred, the other %s will be ' \
+                'left open.' % (len(cow_id_list), h, service_bulls, max_matings, (service_bulls*max_matings),
+                                (len(cow_id_list)-(service_bulls*max_matings)))
         # Now loop over B to allocate the best matings
         for c in cow_portfolio[h]:
-            if c[6] == 'A':
-                # What column in b_mat corresponds to cow c?
-                cow_loc = cow_id_list.index(c[0])
-                # Get a vector of indices that would result in a sorted list.
-                sorted_bulls = ma.argsort(b_mat[:, cow_loc])
-                # The first element in sorted_bulls is the index of the smallest element in b_mat[:,cow_loc]. The
-                # last element in sorted_bulls is the index of the largest element in b_mat[:,cow_loc].
-                for bidx in xrange(len(bull_portfolio[h])-1, -1, -1):
-                    # Does this bull still have matings available?
-                    if matings[bull_portfolio[h][sorted_bulls[bidx]][0]] >= max_matings:
-                        pass
-                    elif bull_portfolio[h][sorted_bulls[bidx]][6] != 'A':
-                        pass
-                    else:
-                        m_mat[sorted_bulls[bidx], cow_loc] = 1
-                        matings[bull_portfolio[h][sorted_bulls[bidx]][0]] += 1
-                        calf = create_new_calf(bull_portfolio[h][sorted_bulls[bidx]], c, recessives, next_id,
-                                               generation, debug=debug)
-                        calf_id = str(bull_portfolio[h][sorted_bulls[bidx]][0])+'__'+str(c[0])
-                        if penalty:
-                            fpdict[calf_id]['mating'] = 1
-                        if calf[4] == 'F': new_cows.append(calf)
-                        else: new_bulls.append(calf)
-                        next_id += 1
-                        # ...and, we're done.
-                        break
+            # What column in b_mat corresponds to cow c?
+            cow_loc = cow_id_list.index(c[0])
+            # Get a vector of indices that would result in a sorted list.
+            sorted_bulls = ma.argsort(b_mat[:, cow_loc])
+            # The first element in sorted_bulls is the index of the smallest element in b_mat[:,cow_loc]. The
+            # last element in sorted_bulls is the index of the largest element in b_mat[:,cow_loc].
+            for bidx in xrange(len(bull_portfolio[h])-1, -1, -1):
+                # Does this bull still have matings available?
+                if matings[bull_portfolio[h][sorted_bulls[bidx]][0]] >= max_matings:
+                    pass
+                elif bull_portfolio[h][sorted_bulls[bidx]][6] != 'A':
+                    pass
+                else:
+                    m_mat[sorted_bulls[bidx], cow_loc] = 1
+                    matings[bull_portfolio[h][sorted_bulls[bidx]][0]] += 1
+                    calf = create_new_calf(bull_portfolio[h][sorted_bulls[bidx]], c, recessives, next_id,
+                                           generation, debug=debug)
+                    calf_id = str(bull_portfolio[h][sorted_bulls[bidx]][0])+'__'+str(c[0])
+                    if penalty:
+                        fpdict[calf_id]['mating'] = 1
+                    if calf[4] == 'F': new_cows.append(calf)
+                    else: new_bulls.append(calf)
+                    next_id += 1
+                    # ...and, we're done.
+                    break
 
     # Write the F_ij / \sum{P(aa)} information that we've been accumulating to a file for later analysis.
     if penalty:
         fpfile = 'fij_paa_pryce_%s.txt' % generation
         fph = open(fpfile, 'w')
         for fpkey in fpdict.keys():
-            fpline = '%s %s %s %s %s %s %s\n' % ( fpkey, fpdict[calf_id]['sire'], fpdict[calf_id]['dam'],
-                                                  fpdict[calf_id]['gen'], fpdict[calf_id]['inbr'],
-                                                  fpdict[calf_id]['paa'], fpdict[calf_id]['mating']
+            fpline = '%s %s %s %s %s %s %s\n' % ( fpkey, fpdict[fpkey]['sire'], fpdict[fpkey]['dam'],
+                                                  fpdict[fpkey]['gen'], fpdict[fpkey]['inbr'],
+                                                  fpdict[fpkey]['paa'], fpdict[fpkey]['mating']
                                                   )
             fph.write(fpline)
         fph.close()
@@ -1142,7 +1150,7 @@ def cull_bulls(bulls, dead_bulls, generation, max_bulls=250, debug=False):
         # Now we're going to sort on TBV in ascending order
         bulls.sort(key=lambda x: x[9])
         n_culled = 0
-        for b in bulls[0:len(bulls)-max_bulls-1]:
+        for b in bulls[0:len(bulls)-max_bulls]:
             b[6] = 'D'           # This bull is dead
             b[7] = 'N'           # Because there were too many of them
             b[8] = generation    # In the current generation
@@ -1247,7 +1255,7 @@ def cull_cows(cows, dead_cows, generation, max_cows=0, culling_rate=0.0, debug=F
     # culled bulls and move them into the dead_bulls list.
     else:
         c_diff = len(cows) - max_cows
-        for c in cows[0:c_diff-1]:
+        for c in cows[0:c_diff]:
             c[6] = 'D'           # This cow is dead
             c[7] = 'N'           # Because there were too many of them
             c[8] = generation    # In the current generation
@@ -1461,6 +1469,9 @@ def run_scenario(scenario='random', gens=20, percent=0.10, base_bulls=500, base_
                  filetag='', recessives=[], max_matings=500, rng_seed=None, show_recessives=False,
                  history_freq='end'):
 
+    if rng_seed:
+        random.seed(rng_seed)
+
     # This is the initial setup
     print '[run_scenario]: Setting-up the simulation at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     cows, bulls, dead_cows, dead_bulls, freq_hist = setup(base_bulls=base_bulls,
@@ -1667,17 +1678,17 @@ def run_scenario(scenario='random', gens=20, percent=0.10, base_bulls=500, base_
 if __name__ == '__main__':
 
     # Simulation parameters
-    base_bulls = 350        # Initial number of founder bulls in the population
-    base_cows = 35000       # Initial number of founder cows in the population
-    service_bulls = 50      # Number of herd bulls to use in each herd each generation.
-    base_herds = 200        # Number of herds in the population
-    max_bulls = 500         # Maximum number of live bulls to keep each generation
-    max_cows = 100000       # Maximum number of live cows to keep each generation
-    percent = 0.10          # Proportion of bulls to use in the toppct scenario
-    generations = 20        # How long to run the simulation
-    max_matings = 5000      # The maximum number of matings permitted for each bull (5% of cows)
-    debug = True            # Activate (True) or deactivate (False) debugging messages
-    history_freq = 'end'    # Only write history files at teh end of the simulation, not every generation.
+    base_bulls =    350      # Initial number of founder bulls in the population
+    base_cows =     35000    # Initial number of founder cows in the population
+    service_bulls = 50       # Number of herd bulls to use in each herd each generation.
+    base_herds =    200      # Number of herds in the population
+    max_bulls =     500      # Maximum number of live bulls to keep each generation
+    max_cows =      100000   # Maximum number of live cows to keep each generation
+    percent =       0.10     # Proportion of bulls to use in the toppct scenario
+    generations =   20       # How long to run the simulation
+    max_matings =   5000     # The maximum number of matings permitted for each bull (5% of cows)
+    debug =         True     # Activate (True) or deactivate (False) debugging messages
+    history_freq =  'end'    # Only write history files at teh end of the simulation, not every generation.
 
     # Recessives are stored in a list of lists. The first value in each list is the minor allele frequency in the base
     # population, and the second number is the economic value of the minor allele. If the economic value is $20, that
@@ -1723,4 +1734,4 @@ if __name__ == '__main__':
     run_scenario(scenario='pryce_r', percent=percent, base_bulls=base_bulls, base_cows=base_cows,
                  base_herds=base_herds, service_bulls=service_bulls, max_bulls=max_bulls, max_cows=max_cows,
                  debug=debug, filetag='_pryce_r_default', recessives=recessives, gens=generations,
-                 max_matings=max_matings, rng_seed=None, history_freq=history_freq)
+                 max_matings=max_matings, rng_seed=1702, history_freq=history_freq)
