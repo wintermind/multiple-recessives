@@ -27,6 +27,7 @@ import numpy as np
 import numpy.ma as ma
 from scipy.stats import bernoulli
 import ast
+import os
 
 # Setup the simulation
 #    base_bulls:            Number of bulls in the base population (founders)
@@ -261,8 +262,7 @@ def random_mating(cows, bulls, dead_cows, dead_bulls, generation, recessives, ma
         max_matings = 50
     if max_matings * len(bulls) < len(cows):
         print "[random_mating]: You don't have enough matings to breed all cows1"
-    # Make sure we have current coefficients of inbreeding
-    cows, bulls, dead_cows, dead_bulls = compute_inbreeding(cows, bulls, dead_cows, dead_bulls, generation, debug)
+
     # Make a list of bulls so that we can track the number of matings for each
     matings = {}
     new_cows = []
@@ -306,6 +306,7 @@ def random_mating(cows, bulls, dead_cows, dead_bulls, generation, recessives, ma
                 else:
                     if debug:
                         print 'bull %s (ID %s) is not alive or does not have available matings' % (bull_to_use, bull_id)
+
     for nc in new_cows:
         if nc[6] == 'A':
             cows.append(nc)
@@ -316,6 +317,12 @@ def random_mating(cows, bulls, dead_cows, dead_bulls, generation, recessives, ma
             bulls.append(nb)
         else:
             dead_bulls.append(nb)
+
+    # Make sure we have current coefficients of inbreeding -- we'll need them for matings in the next generation.
+    prefix = 'random'
+    cows, bulls, dead_cows, dead_bulls = compute_inbreeding(cows, bulls, dead_cows, dead_bulls, generation,
+                                                            prefix, debug)
+
     return cows, bulls, dead_cows, dead_bulls
 
 
@@ -351,8 +358,7 @@ def toppct_mating(cows, bulls, dead_cows, dead_bulls, generation,
     if pct < 0.0 or pct > 1.0:
         print '[toppct_mating]: %s is outside of the range 0.0 <= pct <= 1.0, changing to 0.10' % pct
         pct = 0.10
-    # Make sure we have current coefficients of inbreeding
-    cows, bulls, dead_cows, dead_bulls = compute_inbreeding(cows, bulls, dead_cows, dead_bulls, generation, debug)
+
     # Sort bulls on TBV in ascending order
     bulls.sort(key=lambda x: x[9])
     # How many do we keep?
@@ -418,6 +424,12 @@ def toppct_mating(cows, bulls, dead_cows, dead_bulls, generation,
     if debug:
         print '\t[toppct_mating]: %s animals in final cow list' % len(cows)
         print '\t[toppct_mating]: %s animals in final bull list' % len(bulls)
+
+    # Make sure we have current coefficients of inbreeding -- we'll need them for matings in the next generation.
+    prefix = 'toppct'
+    cows, bulls, dead_cows, dead_bulls = compute_inbreeding(cows, bulls, dead_cows, dead_bulls, generation,
+                                                            prefix, debug)
+
     return cows, bulls, dead_cows, dead_bulls
 
 
@@ -447,11 +459,12 @@ def get_next_id(cows, bulls, dead_cows, dead_bulls):
 # bulls         : A list of live bull records
 # dead_cows     : A list of dead cow records
 # dead_bulls    : A list of dead bull records
-# debug         : Flag to activate/deactivate debugging messages
 # generation    : The current generation in the simulation
+# prefix        : Prefix for filenames to tell scenarios apart.
+# debug         : Flag to activate/deactivate debugging messages
 
 
-def compute_inbreeding(cows, bulls, dead_cows, dead_bulls, generation, debug=False):
+def compute_inbreeding(cows, bulls, dead_cows, dead_bulls, generation, prefix='', debug=False):
 
     #
     # Now, we're going to need to construct a pedigree that includes matings of all cows in
@@ -518,7 +531,10 @@ def compute_inbreeding(cows, bulls, dead_cows, dead_bulls, generation, debug=Fal
             (pedigree_counter, generation, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
 
     # Write the pedigree to a file.
-    pedfile = 'compute_inbreeding_%s.txt' % generation
+    if len(prefix) == 0:
+        pedfile = 'compute_inbreeding_%s.txt' % generation
+    else:
+        pedfile = 'compute_inbreeding_%s_%s.txt' % (prefix, generation)
     if debug:
         print '\t[compute_inbreeding]: Writing pedigree to %s at %s' % \
               (pedfile, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
@@ -545,7 +561,10 @@ def compute_inbreeding(cows, bulls, dead_cows, dead_bulls, generation, debug=Fal
     # Stack Overflow (http://stackoverflow.com/questions/12057794/
     # python-using-popen-poll-on-background-process). I'm not 100% sure that this works
     # as intended, but I'm out of ideas.
-    logfile = 'compute_inbreeding_%s.log' % generation
+    if len(prefix) == 0:
+        logfile = 'compute_inbreeding_%s.log' % generation
+    else:
+        logfile = 'compute_inbreeding_%s_%s.log' % (prefix, generation)
     # Several methods can be used:
     # 1 - recursive as in Aguilar & Misztal, 2008 (default)
     # 2 - recursive but with coefficients store in memory, faster with large number of
@@ -553,7 +572,7 @@ def compute_inbreeding(cows, bulls, dead_cows, dead_bulls, generation, debug=Fal
     # 3 - method as in Meuwissen & Luo 1992
     if debug:
         print '\t[compute_inbreeding]: Started inbupgf90 to calculate COI at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-    callinbupgf90 = ['inbupgf90', '--pedfile', pedfile, '--method', '3', '--yob', '>', logfile, '2>&1&']
+    callinbupgf90 = ['inbupgf90', '--pedfile', pedfile, '--method', '1', '--yob', '>', logfile, '2>&1&']
     time_waited = 0
     p = subprocess.Popen(callinbupgf90, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     while p.poll() is None:
@@ -577,7 +596,10 @@ def compute_inbreeding(cows, bulls, dead_cows, dead_bulls, generation, debug=Fal
               datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
 
     # Load the COI into a dictionary keyed by original animal ID
-    coifile = 'compute_inbreeding_%s.txt.solinb' % generation
+    if len(prefix) == 0:
+        coifile = 'compute_inbreeding_%s.txt.solinb' % generation
+    else:
+        coifile = 'compute_inbreeding_%s_%s.txt.solinb' % (prefix, generation)
     if debug:
         print '\t[compute_inbreeding]: Putting coefficients of inbreeding from %s.solinb in a dictionary at %s' \
             % (pedfile, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
@@ -593,6 +615,16 @@ def compute_inbreeding(cows, bulls, dead_cows, dead_bulls, generation, debug=Fal
     for dc in dead_cows: dc[10] = inbr[dc[0]]
     for b in bulls: b[10] = inbr[b[0]]
     for db in dead_bulls: db[10] = inbr[db[0]]
+
+    # Clean-up
+    if len(prefix) == 0:
+        os.remove('compute_inbreeding_%s_%s.txt' % (prefix, generation))
+        os.remove('compute_inbreeding_%s_%s.txt.errors' % (prefix, generation))
+        os.remove('compute_inbreeding_%s_%s.txt.inbavgs' % (prefix, generation))
+    else:
+        os.remove('compute_inbreeding_%s.txt' % generation)
+        os.remove('compute_inbreeding_%s.txt.errors' % generation)
+        os.remove('compute_inbreeding_%s.txt.inbavgs' % generation)
 
     # Send everything back to the calling routine
     return cows, bulls, dead_cows, dead_bulls
@@ -761,9 +793,9 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
             (pedigree_counter, generation, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
     # Write the pedigree to a file.
     if penalty:
-        pedfile = 'pedigree_pryce_%s.txt' % generation
-    else:
         pedfile = 'pedigree_pryce_r_%s.txt' % generation
+    else:
+        pedfile = 'pedigree_pryce_%s.txt' % generation
     if debug:
         print '\t[pryce_mating]: Writing pedigree to %s at %s' % \
               (pedfile, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
@@ -795,9 +827,9 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
     # python-using-popen-poll-on-background-process). I'm not 100% sure that this works
     # as intended, but I'm out of ideas.
     if penalty:
-        logfile = 'pedigree_pryce_%s.log' % generation
-    else:
         logfile = 'pedigree_pryce_r_%s.log' % generation
+    else:
+        logfile = 'pedigree_pryce_%s.log' % generation
     # Several methods can be used:
     # 1 - recursive as in Aguilar & Misztal, 2008 (default)
     # 2 - recursive but with coefficients store in memory, faster with large number of
@@ -805,7 +837,7 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
     # 3 - method as in Meuwissen & Luo 1992
     if debug:
         print '\t[pryce_mating]: Started inbupgf90 to calculate COI at %s' % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-    callinbupgf90 = ['inbupgf90', '--pedfile', pedfile, '--method', '3', '--yob', '>', logfile, '2>&1&']
+    callinbupgf90 = ['inbupgf90', '--pedfile', pedfile, '--method', '1', '--yob', '>', logfile, '2>&1&']
     time_waited = 0
     p = subprocess.Popen(callinbupgf90, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     while p.poll() is None:
@@ -830,9 +862,9 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
 
     # Load the COI into a dictionary keyed by original animal ID
     if penalty:
-        coifile = 'pedigree_pryce_%s.txt.solinb' % generation
-    else:
         coifile = 'pedigree_pryce_r_%s.txt.solinb' % generation
+    else:
+        coifile = 'pedigree_pryce_%s.txt.solinb' % generation
     if debug:
         print '\t[pryce_mating]: Putting coefficients of inbreeding from %s.solinb in a dictionary at %s' \
             % (pedfile, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
@@ -872,8 +904,8 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
     # For each herd we're going to loop over all possible matings of the cows in the herd to the randomly chosen
     # bull portfolio and compute a parent average. Then we'll select the actual matings. This will be on a within-
     # herd basis, so a new B and M will be computed for each herd.
-    new_cows = []
     new_bulls = []
+    new_cows = []
     for h in bull_portfolio.keys():
         herd_counter += 1
         if herd_counter % tenth == 0 and debug:
@@ -943,6 +975,8 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
         # Sort bulls on ID in ascending order
         bull_portfolio[h].sort(key=lambda x: x[0])
         cow_id_list = [c[0] for c in cow_portfolio[h]]
+        #new_bulls = []
+        #new_cows = []
         if len(cow_id_list) > ( service_bulls * max_matings ):
             print '\t[pryce_mating]: WARNING! There are %s cows in herd %s, but %s service sires limited to %s matings ' \
                 'cannot breed that many cows! Only the first %s cows in the herd will be bred, the other %s will be ' \
@@ -960,14 +994,22 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
                 # Does this bull still have matings available?
                 if matings[bull_portfolio[h][sorted_bulls[bidx]][0]] >= max_matings:
                     pass
+                    #print 'Bull %s (%s) already has %s matings.' % (bidx, str(bull_portfolio[h][sorted_bulls[bidx]][0]), matings[bull_portfolio[h][sorted_bulls[bidx]][0]])
                 elif bull_portfolio[h][sorted_bulls[bidx]][6] != 'A':
                     pass
+                    #print 'Bull %s (%s) is dead' % (bidx, str(bull_portfolio[h][sorted_bulls[bidx]][0]))
                 else:
                     m_mat[sorted_bulls[bidx], cow_loc] = 1
                     matings[bull_portfolio[h][sorted_bulls[bidx]][0]] += 1
                     calf = create_new_calf(bull_portfolio[h][sorted_bulls[bidx]], c, recessives, next_id,
                                            generation, debug=debug)
                     calf_id = str(bull_portfolio[h][sorted_bulls[bidx]][0])+'__'+str(c[0])
+                    # Assign inbreeding to calf
+                    ##try:
+                    calf[10] = inbr[calf_id]
+                    ##except KeyError:
+                    ##    calf[10] = 0.0
+                    #print calf_id, calf
                     if penalty:
                         fpdict[calf_id]['mating'] = 1
                     if calf[4] == 'F': new_cows.append(calf)
@@ -1011,6 +1053,16 @@ def pryce_mating(cows, bulls, dead_cows, dead_bulls, generation,
         print '\t\t[pryce_mating]: %s animals in final live bull list' % len(bulls)
         print '\t\t[pryce_mating]: %s animals in final dead bull list' % len(dead_bulls)
 
+    # Clean-up
+    if penalty:
+        os.remove('compute_inbreeding_r_%s.txt' % generation)
+        os.remove('compute_inbreeding_r_%s.txt.errors' % generation)
+        os.remove('compute_inbreeding_r_%s.txt.inbavgs' % generation)
+    else:
+        os.remove('compute_inbreeding_%s.txt' % generation)
+        os.remove('compute_inbreeding_%s.txt.errors' % generation)
+        os.remove('compute_inbreeding_%s.txt.inbavgs' % generation)
+
     return cows, bulls, dead_cows, dead_bulls
 
 
@@ -1033,9 +1085,7 @@ def create_new_calf(sire, dam, recessives, calf_id, generation, debug=False):
         sex = 'F'
     # Compute the parent average
     tbv = (sire[9] + dam[9]) * 0.5
-    # Add a Mendelian sampling term -- in this case, it's set to
-    # +/- 1 genetic SD.
-    #tbv += (random.normalvariate(0, 1) * 200)
+    # Add a Mendelian sampling term.
     var_adj = math.sqrt(0.5) * ( 1. - ( 0.5 * ( sire[10] + dam[10] ) ) )
     tbv += (random.normalvariate(0, 1) * 200 * var_adj)
     # Form the animal record. Note that heifers are born into the same herd as their
@@ -1406,7 +1456,10 @@ def write_history_files(cows, bulls, dead_cows, dead_bulls, generation, filetag=
     for c in cows:
         outline = ''
         for p in c:
-            outline += '\t%s' % p
+            if len(outline) == 0:
+                outline += '%s' % p
+            else:
+                outline += '\t%s' % p
         outline += '\n'
         ofh.write(outline)
     ofh.close()
@@ -1416,7 +1469,10 @@ def write_history_files(cows, bulls, dead_cows, dead_bulls, generation, filetag=
     for c in dead_cows:
         outline = ''
         for p in c:
-            outline += '\t%s' % p
+            if len(outline) == 0:
+                outline += '%s' % p
+            else:
+                outline += '\t%s' % p
         outline += '\n'
         ofh.write(outline)
     ofh.close()
@@ -1426,7 +1482,10 @@ def write_history_files(cows, bulls, dead_cows, dead_bulls, generation, filetag=
     for b in bulls:
         outline = ''
         for p in b:
-            outline += '\t%s' % p
+            if len(outline) == 0:
+                outline += '%s' % p
+            else:
+                outline += '\t%s' % p
         outline += '\n'
         ofh.write(outline)
     ofh.close()
@@ -1436,7 +1495,10 @@ def write_history_files(cows, bulls, dead_cows, dead_bulls, generation, filetag=
     for b in dead_bulls:
         outline = ''
         for p in b:
-            outline += '\t%s' % p
+            if len(outline) == 0:
+                outline += '%s' % p
+            else:
+                outline += '\t%s' % p
         outline += '\n'
         ofh.write(outline)
     ofh.close()
@@ -1710,7 +1772,7 @@ if __name__ == '__main__':
                  filetag='_ran_default', recessives=recessives, rng_seed=None,
                  history_freq=history_freq)
 
-    # # Now run truncation selection, just to introduce some genetic trend.
+    # Now run truncation selection, just to introduce some genetic trend.
     print '=' * 80
     recessives = copy.deepcopy(default_recessives)
     run_scenario(scenario='toppct', percent=percent, base_bulls=base_bulls,
@@ -1734,4 +1796,4 @@ if __name__ == '__main__':
     run_scenario(scenario='pryce_r', percent=percent, base_bulls=base_bulls, base_cows=base_cows,
                  base_herds=base_herds, service_bulls=service_bulls, max_bulls=max_bulls, max_cows=max_cows,
                  debug=debug, filetag='_pryce_r_default', recessives=recessives, gens=generations,
-                 max_matings=max_matings, rng_seed=1702, history_freq=history_freq)
+                 max_matings=max_matings, rng_seed=None, history_freq=history_freq)
