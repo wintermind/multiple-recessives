@@ -617,7 +617,7 @@ def compute_inbreeding(cows, bulls, dead_cows, dead_bulls, generation, prefix=''
     for db in dead_bulls: db[10] = inbr[db[0]]
 
     # Clean-up
-    if len(prefix) == 0:
+    if len(prefix) > 0:
         os.remove('compute_inbreeding_%s_%s.txt' % (prefix, generation))
         os.remove('compute_inbreeding_%s_%s.txt.errors' % (prefix, generation))
         os.remove('compute_inbreeding_%s_%s.txt.inbavgs' % (prefix, generation))
